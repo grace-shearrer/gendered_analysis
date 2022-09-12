@@ -1,0 +1,388 @@
+---
+title: "Gendered perspective paper - cleaning data"
+output: html_notebook
+---
+
+```{r}
+library(vroom)
+library(plyr)
+library(ggplot2)
+library(psych)
+library(tidyverse)
+library(OpenMx)
+library(dplyr)
+```
+
+# Read in the data
+```{r}
+df<-vroom("~/University of Wyoming/M2AENAD Lab - Documents/RESEARCH/multi-state/data/Qualtrics+Pilot-Actual+2020-Parent-Child+Dyad+Survey_December+21,+2021_09.21.csv")
+df<-df[-c(1), ] # remove extra header row
+head(df[, c(15:203)])
+```
+```{r}
+df<-df[,c(24,28, 36:203, 274:308,353:358, 361, 368:371, 342:348) ]  # variables of interest
+```
+# Diet data
+Cols 42-203
+From table 1 FLASHE guide - Drinks into drinks per day
+From table 2
+
+## SSB
+soda + energy drinks + sweetened
+fruit drinks + sports drinks
+```{r SSB conversion}
+df0<-df %>%
+  mutate(across(c('Q2.6','Q2.12','Q2.18','Q2.24','Q2.30','Q2.36','Q2.13','Q2.14','Q2.15','Q2.16','Q2.17'),
+                factor))
+
+df1<-df0 %>%
+  mutate_at(c('Q2.6','Q2.7','Q2.8','Q2.9','Q2.10','Q2.11'), funs(recode(.,
+                              'I did not drink sweetened fruit drinks during the past 7 days' = 0,                
+                              'I did not drink sweetened fruit drinks when my main caregiver was not around' = 0,
+                              '1 \xd0 3 times in the past 7 days' = 0.29,
+                              '4 \xd0 6 times in the past 7 days' = 0.71,
+                              '1-3 times in the past 7 days' = 0.29,
+                              '4-6 times in the past 7 days' = 0.71,
+                              '1 time per day' = 1,
+                              '2 times per day' = 2,
+                              '3 or more times per day' = 3)))%>%
+  mutate_at(c('Q2.12','Q2.13','Q2.14','Q2.15','Q2.16','Q2.17'), funs(recode(.,
+                              'I did not drink 100% pure fruit juice during the past 7 days' = 0,
+                              'I did not drink 100% pure fruit juice when my main caregiver was not around' = 0,
+                              '1 \xd0 3 times in the past 7 days' = 0.29,
+                              '4 \xd0 6 times in the past 7 days' = 0.71,
+                              '1-3 times in the past 7 days' = 0.29,
+                              '4-6 times in the past 7 days' = 0.71,
+                              '1 time per day' = 1,
+                              '2 times per day' = 2,
+                              '3 or more times per day' = 3)))%>%
+  mutate_at(c('Q2.18','Q2.19','Q2.20','Q2.21','Q2.22','Q2.23'), funs(recode(.,
+                              'I did not drink soda during the past 7 days' = 0,
+                              'I did not drink soda when my main caregiver was not around' = 0,
+                              '1 \xd0 3 times in the past 7 days' = 0.29,
+                              '4 \xd0 6 times in the past 7 days' = 0.71,
+                              '1-3 times in the past 7 days' = 0.29,
+                              '4-6 times in the past 7 days' = 0.71,
+                              '1 time per day' = 1,
+                              '2 times per day' = 2,
+                              '3 or more times per day' = 3)))%>%
+  mutate_at(c('Q2.24','Q2.25','Q2.26','Q2.27','Q2.28','Q2.29'), funs(recode(.,
+                              'I did not drink energy drinks during the past 7 days' = 0,
+                              'I did not drink energy drinks when my main caregiver was not around' = 0,
+                              '1 \xd0 3 times in the past 7 days' = 0.29,
+                              '4 \xd0 6 times in the past 7 days' = 0.71,
+                              '1-3 times in the past 7 days' = 0.29,
+                              '4-6 times in the past 7 days' = 0.71,
+                              '1 time per day' = 1,
+                              '2 times per day' = 2,
+                              '3 or more times per day' = 3)))%>%
+  mutate_at(c('Q2.30','Q2.31','Q2.32','Q2.33','Q2.34','Q2.35'), funs(recode(.,
+                              'I did not drink sports drinks during the past 7 days' = 0,
+                              'I did not drink sports drinks when my main caregiver was not around' = 0,
+                              '1 \xd0 3 times in the past 7 days' = 0.29,
+                              '4 \xd0 6 times in the past 7 days' = 0.71,
+                              '1-3 times in the past 7 days' = 0.29,
+                              '4-6 times in the past 7 days' = 0.71,
+                              '1 time per day' = 1,
+                              '2 times per day' = 2,
+                              '3 or more times per day' = 3)))%>%
+  mutate_at(c('Q2.36','Q2.37','Q2.38','Q2.39','Q2.40','Q2.41'), funs(recode(.,
+                              'I did not drink water during the past 7 days' = 0,
+                              'I did not drink water when my main caregiver was not around' = 0,
+                              '1 \xd0 3 times in the past 7 days' = 0.29,
+                              '4 \xd0 6 times in the past 7 days' = 0.71,
+                              '1-3 times in the past 7 days' = 0.29,
+                              '4-6 times in the past 7 days' = 0.71,
+                              '1 time per day' = 1,
+                              '2 times per day' = 2,
+                              '3 or more times per day' = 3)))
+
+```
+
+## Junk Foods
+candy/chocolate + cookies/cake +
+potato chips + fried potatoes +
+frozen desserts
+```{r Junk food conversion}
+df2<-df1 %>%
+  mutate_at(c('Q2.133','Q2.134','Q2.135','Q2.136','Q2.137','Q2.138'), funs(recode(.,
+                              'I did not eat candy or chocolate during the past 7 days' = 0,                                         
+                              'I did not eat candy or chocolate when my main caregiver was not around' = 0,
+                              '1-3 times in the past 7 days' = 0.29,
+                              '4-6 times in the past 7 days' = 0.71,
+                              '1 time per day' = 1,
+                              '2 times per day' = 2,
+                              '3 or more times per day' = 3))) %>%
+  mutate_at(c('Q2.139','Q2.140','Q2.141','Q2.142','Q2.143','Q2.144'), funs(recode(.,
+                              'I did not eat any of these during the past 7 days' = 0,                                         
+                              'I did not eat any of these when my main caregiver was not around' = 0,
+                              '1-3 times in the past 7 days' = 0.29,
+                              '4-6 times in the past 7 days' = 0.71,
+                              '1 time per day' = 1,
+                              '2 times per day' = 2,
+                              '3 or more times per day' = 3))) %>%
+  mutate_at(c('Q2.145','Q2.146','Q2.147','Q2.148','Q2.149','Q2.150'), funs(recode(.,
+                              'I did not eat frozen desserts during the past 7 days' = 0,                                         
+                              'I did not eat frozen desserts when my main caregiver was not around' = 0,
+                              '1-3 times in the past 7 days' = 0.29,
+                              '4-6 times in the past 7 days' = 0.71,
+                              '1 time per day' = 1,
+                              '2 times per day' = 2,
+                              '3 or more times per day' = 3))) %>%
+  mutate_at(c('Q2.151','Q2.152','Q2.153','Q2.154','Q2.155','Q2.156'), funs(recode(.,
+                              'I did not eat chips during the past 7 days' = 0,                                         
+                              'I did not eat chips when my main caregiver was not around' = 0,
+                              '1-3 times in the past 7 days' = 0.29,
+                              '4-6 times in the past 7 days' = 0.71,
+                              '1 time per day' = 1,
+                              '2 times per day' = 2,
+                              '3 or more times per day' = 3))) %>%
+  mutate_at(c('Q2.61','Q2.62','Q2.63','Q2.64','Q2.65','Q2.66'), funs(recode(.,
+                              'I did not eat fried potatoes during the past 7 days' = 0,                                         
+                              'I did not eat fried potatoes when my main caregiver was not around' = 0,
+                              '1-3 times in the past 7 days' = 0.29,
+                              '4-6 times in the past 7 days' = 0.71,
+                              '1 time per day' = 1,
+                              '2 times per day' = 2,
+                              '3 or more times per day' = 3))) 
+
+```
+## Sugary Foods
+frozen dessert + cookies/cake +
+candy/chocolate + sugary cereal
+```{r sugar cereal conv}
+df3<-df2 %>%
+  mutate_at(c('Q2.157','Q2.158','Q2.159','Q2.160','Q2.161','Q2.162'), funs(recode(.,
+                              'I did not eat sugary cereals during the past 7 days' = 0,                                         
+                              'I did not eat sugary cereals when my main caregiver was not around' = 0,
+                              '1-3 times in the past 7 days' = 0.29,
+                              '4-6 times in the past 7 days' = 0.71,
+                              '1 time per day' = 1,
+                              '2 times per day' = 2,
+                              '3 or more times per day' = 3))) 
+summary(as.factor(df2$Q2.158))
+```
+## Fast/Convenience Foods
+fried potatoes + fried chicken +
+pizza + tacos + burgers + heat and serve
+```{r convenience foods conv}
+df4<-df3 %>%
+  mutate_at(c('Q2.115','Q2.116','Q2.117','Q2.118','Q2.119','Q2.120'), funs(recode(.,
+                              'I did not eat fried chicken during the past 7 days' = 0,                                         
+                              'I did not eat fried chicken when my main caregiver was not around' = 0,
+                              '1-3 times in the past 7 days' = 0.29,
+                              '4-6 times in the past 7 days' = 0.71,
+                              '1 time per day' = 1,
+                              '2 times per day' = 2,
+                              '3 or more times per day' = 3))) %>%
+  mutate_at(c('Q2.109','Q2.110','Q2.111','Q2.112','Q2.113','Q2.114'), funs(recode(.,
+                              'I did not eat hamburgers or cheeseburgers during the past 7 days' = 0,                                       
+                              'I did not eat hamburgers or cheeseburgers when my main caregiver was not around' = 0,
+                              '1-3 times in the past 7 days' = 0.29,
+                              '4-6 times in the past 7 days' = 0.71,
+                              '1 time per day' = 1,
+                              '2 times per day' = 2,
+                              '3 or more times per day' = 3))) %>%
+  mutate_at(c('Q2.97','Q2.98','Q2.99','Q2.100','Q2.101','Q2.102'), funs(recode(.,
+                              'I did not eat foods that you heat and serve during the past 7 days' = 0,                                     
+                              'I did not eat foods that you heat and serve when my main caregiver was not around' = 0,
+                              '1-3 times in the past 7 days' = 0.29,
+                              '4-6 times in the past 7 days' = 0.71,
+                              '1 time per day' = 1,
+                              '2 times per day' = 2,
+                              '3 or more times per day' = 3)))%>%
+  mutate_at(c('Q2.91','Q2.92','Q2.93','Q2.94','Q2.95','Q2.96'), funs(recode(.,
+                              'I did not eat these dishes food during the past 7 days' = 0,                                     
+                              'I did not eat these dishes when my main caregiver was not around' = 0,
+                              '1-3 times in the past 7 days' = 0.29,
+                              '4-6 times in the past 7 days' = 0.71,
+                              '1 time per day' = 1,
+                              '2 times per day' = 2,
+                              '3 or more times per day' = 3)))%>%
+  mutate_at(c('Q2.85','Q2.86','Q2.87','Q2.88','Q2.89','Q2.90'), funs(recode(.,
+                              'I did not eat pizza during the past 7 days' = 0,                                     
+                              'I did not eat pizza when my main caregiver was not around' = 0,
+                              '1-3 times in the past 7 days' = 0.29,
+                              '4-6 times in the past 7 days' = 0.71,
+                              '1 time per day' = 1,
+                              '2 times per day' = 2,
+                              '3 or more times per day' = 3)))
+```
+## Fruits and vegetables
+100% fruit juice + fruit + green salad
++ other non-fried vegetables +
+cooked beans + other potatoes
+```{r fruit+veg conversion}
+df5<-df4 %>%
+  mutate_at(c('Q2.49','Q2.50','Q2.51','Q2.52','Q2.53','Q2.54'), funs(recode(.,
+                              'I did not eat fruit during the past 7 days' = 0,                                   
+                              'I did not eat fruit when my main caregiver was not around' = 0,
+                              '1-3 times in the past 7 days' = 0.29,
+                              '4-6 times in the past 7 days' = 0.71,
+                              '1 time per day' = 1,
+                              '2 times per day' = 2,
+                              '3 or more times per day' = 3))) %>%
+  mutate_at(c('Q2.55','Q2.56','Q2.57','Q2.58','Q2.59','Q2.60'), funs(recode(.,
+                              'I did not eat green salad during the past 7 days' = 0,                             
+                              'I did not eat green salad when my main caregiver was not around' = 0,
+                              '1-3 times in the past 7 days' = 0.29,
+                              '4-6 times in the past 7 days' = 0.71,
+                              '1 time per day' = 1,
+                              '2 times per day' = 2,
+                              '3 or more times per day' = 3))) %>%
+  mutate_at(c('Q2.67','Q2.68','Q2.69','Q2.70','Q2.71','Q2.72'), funs(recode(.,
+                              'I did not eat non-fried potatoes during the past 7 days' = 0,                      
+                              'I did not eat non-fried potatoes when my main caregiver was not around' = 0,
+                              '1-3 times in the past 7 days' = 0.29,
+                              '4-6 times in the past 7 days' = 0.71,
+                              '1 time per day' = 1,
+                              '2 times per day' = 2,
+                              '3 or more times per day' = 3))) %>%
+  mutate_at(c('Q2.73','Q2.74','Q2.75','Q2.76','Q2.77','Q2.78'), funs(recode(.,
+                              'I did not eat non-fried vegetables during the past 7 days' = 0,                    
+                              'I did not eat non-fried vegetables when my main caregiver was not around' = 0,
+                              '1-3 times in the past 7 days' = 0.29,
+                              '4-6 times in the past 7 days' = 0.71,
+                              '1 time per day' = 1,
+                              '2 times per day' = 2,
+                              '3 or more times per day' = 3))) %>%
+  mutate_at(c('Q2.79','Q2.80','Q2.81','Q2.82','Q2.83','Q2.84'), funs(recode(.,
+                              'I did not eat cooked beans during the past 7 days' = 0,                    
+                              'I did not eat cooked beans when my main caregiver was not around' = 0,
+                              '1-3 times in the past 7 days' = 0.29,
+                              '4-6 times in the past 7 days' = 0.71,
+                              '1 time per day' = 1,
+                              '2 times per day' = 2,
+                              '3 or more times per day' = 3))) 
+```
+# Freq total
+```{r frequencies}
+df6<-df5 %>%
+  mutate(SSB_freq = rowSums(across(c('Q2.6','Q2.12','Q2.18','Q2.24','Q2.30')))) %>% 
+  mutate(JUNK_freq = rowSums(across(c('Q2.133','Q2.139','Q2.145','Q2.151','Q2.61')))) %>% 
+  mutate(SWEET_freq = rowSums(across(c('Q2.157','Q2.133','Q2.139','Q2.145'))))%>% 
+  mutate(FAST_freq = rowSums(across(c('Q2.115','Q2.109','Q2.97','Q2.91','Q2.85'))))%>% 
+  mutate(FV_freq = rowSums(across(c('Q2.49','Q2.55','Q2.67','Q2.73','Q2.79'))))
+
+summary(df6$FV_freq)
+```
+
+# Need to create a food parenting practice constructs
+See codebook
+```{r recode parenting to numeric}
+df7<-df6 %>%
+  mutate_at(c('Q5.5_1','Q5.5_2','Q5.5_3','Q5.5_4','Q5.6_1','Q5.6_2','Q5.6_3','Q5.6_4','Q5.7_1','Q5.7_2','Q5.7_3','Q5.7_4','Q5.8_1','Q5.8_2','Q5.8_3','Q5.8_4','Q5.9_1','Q5.9_2','Q5.9_3','Q5.9_4','Q4.10_19','Q3.14_3','Q4.10_20','Q4.10_21','Q4.10_22','Q2.11_18','Q4.11_19','Q4.11_20','Q4.12_22','Q4.12_19','Q4.12_20','Q5.13_1','Q5.13_2','Q5.13_3'), funs(recode(.,                                                                                                                  'Never' = 1,'Sometimes' = 2,'About half the time' = 3,'Most of the time' = 4,'Always' = 5
+                  ))) 
+```
+
+
+
+```{r mean parent factors}
+df8<-df7 %>%
+  mutate(INDULGENCE = rowMeans(across(c('Q5.5_1','Q5.6_1', 'Q5.6_3','Q5.7_4','Q4.10_19','Q4.12_20')))) %>% 
+  mutate(EXPECATION = rowMeans(across(c('Q5.5_2','Q5.7_2','Q4.10_20')))) %>% 
+  mutate(AVAILABILE = rowMeans(across(c('Q5.5_4','Q5.9_1','Q5.9_3','Q4.10_22','Q4.12_19'))))%>% 
+  mutate(MONITORING = rowMeans(across(c('Q5.5_3','Q5.7_1','Q5.7_3','Q5.8_4','Q5.9_4','Q5.13_1','Q5.13_2'))))%>% 
+  mutate(AUTONOMY = rowMeans(across(c('Q5.6_2','Q5.6_4','Q5.8_1','Q5.8_3','Q3.14_3','Q4.10_21','Q2.11_18','Q4.11_19','Q5.13_3'))))%>%
+  mutate(MODELING = rowMeans(across(c('Q5.8_2','Q5.9_2','Q4.12_22'))))
+```
+## Parent gender
+```{r}
+summary(as.factor(df8$Q6.11))
+df8$parent_gender<-as.factor(df8$Q6.11)
+```
+
+## Education
+```{r}
+summary(as.factor(df8$Q6.14))
+df8$parent_ED<-as.factor(df8$Q6.14)
+```
+
+## Income
+```{r}
+summary(as.factor(df8$Q6.17))
+df8$INCOME<-as.factor(df8$Q6.17)
+```
+
+## Race ethnicity
+```{r}
+summary(as.factor(df8$Q1.21_4))
+df9<-df8 %>% 
+  unite("RACE_ETH", Q1.21_1:Q1.21_6, remove = FALSE,na.rm = TRUE)
+summary(as.factor(df9$RACE_ETH))
+```
+
+## Adolescent age
+```{r}
+summary(as.factor(df9$Q6.2))
+
+df10<-df9 %>%
+  mutate_at(c('Q6.2'), funs(recode(.,                                                                                                                  '11 years' = 11,'12 years' = 12,'13 years' = 13,'14 years' = 14
+                  ))) 
+
+df10$child_AGE<-df10$Q6.2
+```
+
+```{r}
+summary(as.factor(df10$Q6.3))
+df10$child_SEX<-as.factor(df10$Q6.3)
+```
+
+```{r}
+interest<-c("SSB_freq","JUNK_freq","SWEET_freq","FAST_freq","FV_freq","INDULGENCE","EXPECATION", "AVAILABILE","MONITORING",    "AUTONOMY","MODELING","parent_gender", "parent_ED","INCOME","child_SEX","RACE_ETH")
+final_df<-df10[interest]
+head(final_df)
+```
+
+```{r}
+names(final_df)
+```
+
+```{r}
+
+hist(sqrt(final_df$SSB_freq)) # not normal, sqrt helps
+final_df$SSB_sqrt<-sqrt(final_df$SSB_freq)
+hist(final_df$INDULGENCE)
+hist(log10(6-final_df$EXPECATION)) # could be better, log10 and subtracting largest
+final_df$EXP_log10<-log10(6-final_df$EXPECATION)
+#summary(final_df$EXPECATION)
+hist(log10(6-final_df$AVAILABILE))# not normal, log 10 and subtracting largest
+final_df$AVA_log10<-log10(6-final_df$AVAILABILE)
+hist(final_df$MONITORING)
+hist(sqrt(6-final_df$AUTONOMY))# not normal, sqty and subtracting largest
+final_df$AUT_sqrt<-sqrt(6-final_df$AUTONOMY)
+hist(log10(6-final_df$MODELING))# could be better, log 10 and subtracting the largest
+final_df$MOD_log10<-log10(6-final_df$MODELING)
+```
+
+
+```{r}
+names(final_df)
+final_df$SSB_sqrt_scale<-as.numeric(scale(final_df$SSB_sqrt, scale = F))
+final_df$MOD_log10_scale<-as.numeric(scale(final_df$MOD_log10, scale = F))
+final_df$AUT_sqrt_scale<-as.numeric(scale(final_df$AUT_sqrt, scale = F))
+final_df$AVA_log10_scale<-as.numeric(scale(final_df$AVA_log10, scale = F))
+final_df$EXP_log10_scale<-as.numeric(scale(final_df$EXP_log10, scale = F))
+final_df$IND_scale<-as.numeric(scale(final_df$INDULGENCE, scale = F))
+final_df$EXP_scale<-as.numeric(scale(final_df$EXPECATION, scale = F))
+final_df$MON_scale<-as.numeric(scale(final_df$MONITORING, scale = F))
+summary(final_df)
+```
+
+
+```{r}
+write.table(final_df, "~/University of Wyoming/M2AENAD Lab - Documents/RESEARCH/multi-state/data/final_df.csv", row.names = F, sep = ",")
+```
+
+```{r}
+#load(file = "~/University of Wyoming/M2AENAD Lab - Documents/RESEARCH/multi-state/data/cleaning.RData")
+```
+
+
+
+
+
+```{r}
+#save.image(file = "~/University of Wyoming/M2AENAD Lab - Documents/RESEARCH/multi-state/data/cleaning.RData")
+```
+
