@@ -1,8 +1,10 @@
 ---
 title: "Gendered perspective paper - SSB analysis"
 output:
-  pdf_document: default
+  html_document:
+    df_print: paged
   html_notebook: default
+  pdf_document: default
 ---
 This is an analysis based on the paper "The association of food parenting practices with adolescents’ dietary
 behaviors differ by youth gender, but not by parent gender" by Deslippe et al., 2022
