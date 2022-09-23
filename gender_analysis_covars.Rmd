@@ -1,0 +1,40 @@
+---
+title: "Gender_analysis_Covariate"
+output: html_document
+date: '2022-09-23'
+---
+
+```{r}
+df<-vroom("/Users/gracer/Library/CloudStorage/OneDrive-SharedLibraries-UniversityofWyoming/M2AENAD Lab - Documents/RESEARCH/multi-state/data/final_df.csv")
+```
+```{r}
+names(df)
+#SES<-c("parent_ED","INCOME", "MARITAL","FOOD_SEC")
+```
+
+
+```{r}
+COVmodel <- ' SSB_sqrt_scale ~ parent_gender  + RACE_ETH + child_SEX + MOD_log10_scale + AUT_sqrt_scale + AVA_log10_scale+ EXP_log10_scale + IND_scale + EXP_scale + MON_scale + parent_ED + INCOME+ MARITAL+FOOD_SEC_CAT+iEO_log10
+INCOME ~ parent_ED + MARITAL+FOOD_SEC_CAT
+'
+```
+
+
+```{r}
+COVfit <- cfa(COVmodel, data = df)
+```
+
+```{r}
+summary(COVfit, fit.measures = T, standardized = T, rsquare=T)
+```
+# Summary of covariates related to SSB intake
+Related to SSB, food security, parent education, child sex, race/ethnicity, independent eating occasions
+```{r}
+semPaths(COVfit, 'std', layout = 'tree')
+```
+
+
+```{r}
+save.image(file = "/Users/gracer/Library/CloudStorage/OneDrive-SharedLibraries-UniversityofWyoming/M2AENAD Lab - Documents/RESEARCH/multi-state/data/COV.RData")
+```
+

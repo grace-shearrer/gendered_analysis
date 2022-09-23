@@ -17,12 +17,16 @@ library(dplyr)
 
 # Read in the data
 ```{r}
-df<-vroom("~/University of Wyoming/M2AENAD Lab - Documents/RESEARCH/multi-state/data/Qualtrics+Pilot-Actual+2020-Parent-Child+Dyad+Survey_December+21,+2021_09.21.csv")
+df<-vroom("/Users/gracer/Library/CloudStorage/OneDrive-SharedLibraries-UniversityofWyoming/M2AENAD Lab - Documents/RESEARCH/multi-state/data/Qualtrics+Pilot-Actual+2020-Parent-Child+Dyad+Survey_December+21,+2021_09.21.csv")
 df<-df[-c(1), ] # remove extra header row
 head(df[, c(15:203)])
+names(df)
 ```
+
 ```{r}
-df<-df[,c(24,28, 36:203, 274:308,353:358, 361, 368:371, 342:348) ]  # variables of interest
+df<-df[,c(16, 24,28, 36:203, 274:308,353:358, 361, 368:371, 342:348, 365,372:377) ]  # variables of interest
+#add_keep<-c('Q6.24','Q6.25','Q6.26','Q6.27','Q6.28','Q6.29', 'Q6.20','Q1.5')
+head(df)
 ```
 # Diet data
 Cols 42-203
@@ -281,12 +285,12 @@ df7<-df6 %>%
 
 ```{r mean parent factors}
 df8<-df7 %>%
-  mutate(INDULGENCE = rowMeans(across(c('Q5.5_1','Q5.6_1', 'Q5.6_3','Q5.7_4','Q4.10_19','Q4.12_20')))) %>% 
+  mutate(INDULGENCE = rowMeans(across(c('Q5.5_1','Q5.6_1', 'Q5.6_3','Q5.7_4','Q4.12_20')))) %>% 
   mutate(EXPECATION = rowMeans(across(c('Q5.5_2','Q5.7_2','Q4.10_20')))) %>% 
   mutate(AVAILABILE = rowMeans(across(c('Q5.5_4','Q5.9_1','Q5.9_3','Q4.10_22','Q4.12_19'))))%>% 
-  mutate(MONITORING = rowMeans(across(c('Q5.5_3','Q5.7_1','Q5.7_3','Q5.8_4','Q5.9_4','Q5.13_1','Q5.13_2'))))%>% 
+  mutate(MONITORING = rowMeans(across(c('Q4.10_19','Q5.5_3','Q5.7_1','Q5.7_3','Q5.8_4','Q5.9_4','Q5.13_1','Q5.13_2'))))%>% 
   mutate(AUTONOMY = rowMeans(across(c('Q5.6_2','Q5.6_4','Q5.8_1','Q5.8_3','Q3.14_3','Q4.10_21','Q2.11_18','Q4.11_19','Q5.13_3'))))%>%
-  mutate(MODELING = rowMeans(across(c('Q5.8_2','Q5.9_2','Q4.12_22'))))
+  mutate(MODELING = rowMeans(across(c('Q5.8_2','Q4.12_22'))))
 ```
 ## Parent gender
 ```{r}
@@ -312,6 +316,31 @@ summary(as.factor(df8$Q1.21_4))
 df9<-df8 %>% 
   unite("RACE_ETH", Q1.21_1:Q1.21_6, remove = FALSE,na.rm = TRUE)
 summary(as.factor(df9$RACE_ETH))
+df9$RACE_ETH<-plyr::revalue(df9$RACE_ETH, c("White/Caucasian"=1, 
+                   "Asian"=2,
+                   "Asian_Black/African American"=3,
+                   "Asian_Black/African American_Native American"=4,
+                   "Asian_Hawaiian/Pacific Islander"=5,
+                   "Asian_Hawaiian/Pacific Islander_White/Caucasian"=6,
+                   "Asian_Hispanic/Latino"=7,
+                   "Asian_White/Caucasian"=8,
+                   "Black/African American"=9,
+                   "Black/African American_Hawaiian/Pacific Islander_Hispanic/Latino_Native American"=10,
+                   "Black/African American_Hispanic/Latino"=11,
+                   "Black/African American_Hispanic/Latino_Native American_White/Caucasian"=12,
+                   "Black/African American_Hispanic/Latino_White/Caucasian"=13,
+                   "Black/African American_White/Caucasian"=14,
+                   "Hawaiian/Pacific Islander"=15,
+                   "Hawaiian/Pacific Islander_Hispanic/Latino"=16,
+                   "Hawaiian/Pacific Islander_White/Caucasian"=17,
+                   "Hispanic/Latino"=18,
+                   "Hispanic/Latino_Native American"=19,
+                   "Hispanic/Latino_Native American_White/Caucasian"=20,
+                   "Hispanic/Latino_White/Caucasian"=21,
+                   "Native American"=22,
+                   "Native American_White/Caucasian"=23))
+summary(as.factor(df9$RACE_ETH))
+df9$RACE_ETH<-as.numeric(as.character(df9$RACE_ETH))
 ```
 
 ## Adolescent age
@@ -328,20 +357,96 @@ df10$child_AGE<-df10$Q6.2
 ```{r}
 summary(as.factor(df10$Q6.3))
 df10$child_SEX<-as.factor(df10$Q6.3)
+summary(df10$child_SEX)
+df10$child_SEX<-plyr::revalue(df10$child_SEX, c("Boy"=0, "Girl"=1))
+df10$child_SEX<-as.numeric(as.character(df10$child_SEX))
+```
+
+### Other covariates
+```{r}
+#Q6.20 marital status
+# Food security 
+#Q6.24<-Often true (1) Sometimes true (2) Never true (3) Don't know or prefer not to answer (4)
+#Q6.25<-Often true (1) Sometimes true (2) Never true (3) Don't know or prefer not to answer (4)
+#Q6.26<-Yes (1) No (2) Don't know (3)
+#Q6.27<-Almost every month (1) Some months but not every month (2) Only 1 or 2 months (3) Don't know (4)
+#Q6.28<-Yes (1) No (2) Don't know (3)
+#Q6.29<-Yes (1) No (2) Don't know (3)
+df11<-df10 %>%
+  dplyr::mutate_at(c('Q6.24','Q6.25','Q6.26','Q6.27','Q6.28','Q6.29'), funs(recode(.,
+                              'No' = 0,
+                              'Yes' = 1,
+                              'Almost every month' = 1,
+                              'Only 1 or 2 months' = 0,
+                              'Some months but not every month'= 1,
+                              'Never true' = 0,
+                              'Often true'= 1,
+                              'Sometimes true'= 1)))
+
+df11<-df11 %>%
+  mutate(FOOD_SEC = rowSums(select(.,'Q6.24','Q6.25','Q6.26','Q6.27','Q6.28','Q6.29'), na.rm=TRUE))
+df11$FOOD_SEC_CAT <- cut(df11$FOOD_SEC,
+              breaks=c(0, 1, 4, 7),
+              labels = c(1, 2, 3), right=FALSE)
+df11$FOOD_SEC_CAT<-as.numeric(as.character(df11$FOOD_SEC_CAT))
+
+df12<-df11 %>%
+  dplyr::mutate_at(c('Q6.20'), funs(recode(.,
+                              'Married/Cohabitating' = 0,
+                              'Single' = 1)))
+df12$Q6.20<-as.numeric(as.character(df12$Q6.20))
+
+#scaled to per day
+df13<-df12 %>%
+  dplyr::mutate_at(c('Q1.5'), funs(recode(.,
+                              '1-2 times per week' = 0.142,
+                              '3-4 times per week' = 0.428,
+                              '5-6 times per week' = 0.714,
+                              'Once a day' = 1,
+                              '2 or more times a day' = 2)))
+
+df14<-df13 %>%
+  dplyr::mutate_at(c('Q6.10'), funs(recode(.,
+                              '18-25' = 1,
+                              '26-34' = 2,
+                              '35-54' = 3,
+                              '55-64' = 4)))
+
+
+df15<-df14 %>% rename(., 'MARITAL' = 'Q6.20', 'iEO'='Q1.5', 'PARENT_AGE'='Q6.10')
+
+df15<-df15%>%
+  dplyr::mutate_at(c('parent_gender'), funs(recode(.,
+                              'Female' = 1,
+                              'Male' = 0)))
+summary(df15$parent_ED)
+df15<-df15%>%
+  dplyr::mutate_at(c('parent_ED'), funs(recode(.,
+                              'Have not completed high school' = 0,
+                              'Received high school diploma or GED' = 1,
+                              'Some college or technical school' = 2,
+                              '4-year college, university degree or advanced degree'=3)))
+
+summary(df15$INCOME)
+df15<-df15%>%
+  dplyr::mutate_at(c('INCOME'), funs(recode(.,
+                              'Below $25,000' = 0,                 
+                              '$25,000 - $44,999' = 1,
+                              '$45,000 - $64,999' = 2,
+                              '$65,000 - $84,999' = 3,
+                              '$85,000 or more'=4)))
+
 ```
 
 ```{r}
-interest<-c("SSB_freq","JUNK_freq","SWEET_freq","FAST_freq","FV_freq","INDULGENCE","EXPECATION", "AVAILABILE","MONITORING",    "AUTONOMY","MODELING","parent_gender", "parent_ED","INCOME","child_SEX","RACE_ETH")
-final_df<-df10[interest]
+interest<-c("SSB_freq","JUNK_freq","SWEET_freq","FAST_freq","FV_freq","INDULGENCE","EXPECATION", "AVAILABILE","MONITORING","AUTONOMY","MODELING","parent_gender", "parent_ED","INCOME","child_SEX","RACE_ETH", "MARITAL", "FOOD_SEC_CAT", "iEO")
+final_df<-df15[interest]
 head(final_df)
 ```
 
-```{r}
-names(final_df)
-```
+
 
 ```{r}
-
 hist(sqrt(final_df$SSB_freq)) # not normal, sqrt helps
 final_df$SSB_sqrt<-sqrt(final_df$SSB_freq)
 hist(final_df$INDULGENCE)
@@ -355,11 +460,13 @@ hist(sqrt(6-final_df$AUTONOMY))# not normal, sqty and subtracting largest
 final_df$AUT_sqrt<-sqrt(6-final_df$AUTONOMY)
 hist(log10(6-final_df$MODELING))# could be better, log 10 and subtracting the largest
 final_df$MOD_log10<-log10(6-final_df$MODELING)
+hist(log10(final_df$iEO))
+final_df$iEO_log10<-log10(final_df$iEO)
 ```
 
 
 ```{r}
-names(final_df)
+#names(final_df)
 final_df$SSB_sqrt_scale<-as.numeric(scale(final_df$SSB_sqrt, scale = F))
 final_df$MOD_log10_scale<-as.numeric(scale(final_df$MOD_log10, scale = F))
 final_df$AUT_sqrt_scale<-as.numeric(scale(final_df$AUT_sqrt, scale = F))
@@ -368,16 +475,17 @@ final_df$EXP_log10_scale<-as.numeric(scale(final_df$EXP_log10, scale = F))
 final_df$IND_scale<-as.numeric(scale(final_df$INDULGENCE, scale = F))
 final_df$EXP_scale<-as.numeric(scale(final_df$EXPECATION, scale = F))
 final_df$MON_scale<-as.numeric(scale(final_df$MONITORING, scale = F))
+final_df$iEO_log10_scale<-as.numeric(scale(final_df$iEO_log10, scale = F))
 summary(final_df)
 ```
 
 
 ```{r}
-write.table(final_df, "~/University of Wyoming/M2AENAD Lab - Documents/RESEARCH/multi-state/data/final_df.csv", row.names = F, sep = ",")
+write.table(final_df, "/Users/gracer/Library/CloudStorage/OneDrive-SharedLibraries-UniversityofWyoming/M2AENAD Lab - Documents/RESEARCH/multi-state/data/final_df.csv", row.names = F, sep = ",")
 ```
 
 ```{r}
-#load(file = "~/University of Wyoming/M2AENAD Lab - Documents/RESEARCH/multi-state/data/cleaning.RData")
+#load(file = "/Users/gracer/Library/CloudStorage/OneDrive-SharedLibraries-UniversityofWyoming/M2AENAD Lab - Documents/RESEARCH/multi-state/data/cleaningv1.RData")
 ```
 
 
@@ -385,6 +493,7 @@ write.table(final_df, "~/University of Wyoming/M2AENAD Lab - Documents/RESEARCH/
 
 
 ```{r}
-#save.image(file = "~/University of Wyoming/M2AENAD Lab - Documents/RESEARCH/multi-state/data/cleaning.RData")
+#save.image(file = "/Users/gracer/Library/CloudStorage/OneDrive-SharedLibraries-UniversityofWyoming/M2AENAD Lab - Documents/RESEARCH/multi-state/data/cleaningv1.RData")
 ```
 
+v1 is the dataset with the monitoring fixed

@@ -33,7 +33,7 @@ df<-vroom("/Users/gracer/Library/CloudStorage/OneDrive-SharedLibraries-Universit
 ## Basic model
 food security, parent education, child sex, race/ethnicity, independent eating occasions (from covar analysis)
 ```{r}
-m1 <-'SSB_sqrt_scale ~ IND_scale + EXP_scale + AVA_log10_scale + MON_scale + AUT_sqrt_scale + MOD_log10_scale + parent_gender  + RACE_ETH + child_SEX + parent_ED + FOOD_SEC + iEO_log10'
+m1 <-'SSB_sqrt_scale ~ IND_scale + EXP_scale + AVA_log10_scale + MON_scale + AUT_sqrt_scale + MOD_log10_scale + parent_gender  + RACE_ETH + child_SEX + parent_ED + FOOD_SEC_CAT + iEO_log10'
 ```
 
 ## Confirmatory factor analysis 
@@ -45,25 +45,30 @@ fit1 <- cfa(m1, data = df)
 ```{r}
 summary(fit1, standardized=T,rsquare=T)
 ```
+# Summary of CFA
 IND_scale, AVA_log10_scal, MON_scale , RACE_ETH, child_SEX, parent_ED, FOOD_SEC,  iEO_log10
 
 ## Visualization of SSB CFA
 ```{r}
 semPaths(fit1, 'std', layout = 'spring')
 ```
-# Summary of CFA
-Indulgence, monitoring related to SSB
+```{r}
+df$parent_gender<-as.ordered(df$parent_gender)
+```
 
 ## Interaction models
+IND_scale, AVA_log10_scal, MON_scale
+
 ```{r}
-med_IND_ <- "# mediator, a path
-         parent_gender ~ a*IND_scale
+med_IND_ <- "
+         # mediator, a path
+         parent_gender ~ a*IND_scale+child_SEX+FOOD_SEC_CAT+iEO_log10
 
          # b path
          SSB_sqrt_scale ~ b*parent_gender
 
          # direct effect 
-         SSB_sqrt_scale ~ cp * IND_scale
+         SSB_sqrt_scale ~ cp * IND_scale+child_SEX+FOOD_SEC_CAT+iEO_log10
 
          # indirect 
          ab := a*b
@@ -71,21 +76,41 @@ med_IND_ <- "# mediator, a path
          # Total effects
          total := cp + (a*b)
 "
-
-med_MON_ <- "# a path
-         parent_gender ~ a * MON_scale 
+med_AVA_ <- "
+         # mediator, a path
+         parent_gender ~ a*AVA_log10_scale+child_SEX+FOOD_SEC_CAT+iEO_log10
 
          # b path
-         SSB_sqrt_scale ~ b * parent_gender
+         SSB_sqrt_scale ~ b*parent_gender
 
-         # c prime path 
-         SSB_sqrt_scale ~ cp * MON_scale 
+         # direct effect 
+         SSB_sqrt_scale ~ cp * AVA_log10_scale+child_SEX+FOOD_SEC_CAT+iEO_log10
 
-         # indirect and total effects
-         ab := a * b
+         # indirect 
+         ab := a*b
+         
+         # Total effects
          total := cp + (a*b)
-"
+         "
+med_MON_ <- "
+         # mediator, a path
+         parent_gender ~ a*MON_scale+child_SEX+FOOD_SEC_CAT+iEO_log10
+
+         # b path
+         SSB_sqrt_scale ~ b*parent_gender
+
+         # direct effect 
+         SSB_sqrt_scale ~ cp * MON_scale+child_SEX+FOOD_SEC_CAT+iEO_log10
+
+         # indirect 
+         ab := a*b
+         
+         # Total effects
+         total := cp + (a*b)
+         "
 ```
+
+
 
 ```{r}
 set.seed(1234)
@@ -93,25 +118,22 @@ set.seed(1234)
 
 ### Running the models
 ```{r}
-df$parent_gender<-as.ordered(df$parent_gender)
-IND_sem <- sem(med_IND_, data = df, se = "bootstrap", bootstrap = 5000, estimator = "DWLS")
-MON_sem <- sem(med_MON_, data = df, se = "bootstrap", bootstrap = 5000, estimator = "DWLS")
+IND_sem <- sem(med_IND_, data = df, se = "bootstrap", bootstrap = 5, estimator = "DWLS")
+AVA_sem <- sem(med_AVA_, data = df, se = "bootstrap", bootstrap = 5, estimator = "DWLS")
+MON_sem <- sem(med_MON_, data = df, se = "bootstrap", bootstrap = 5, estimator = "DWLS")
 ```
 
-### Parameter estimates for indulgence
+### Parameter estimates 
 ```{r}
-parameterestimates(IND_sem, boot.ci.type = "bca.simple", standardized = TRUE) 
-```
-
-### Parameter estimates for monitoring
-```{r}
+parameterestimates(AVA_sem, boot.ci.type = "bca.simple", standardized = TRUE) 
+summary(IND_sem, standardized = TRUE) 
 parameterestimates(MON_sem, boot.ci.type = "bca.simple", standardized = TRUE) 
 ```
 
+
+
 # Summary of results
-* No mediation for indulgence based on parent gender
-* Parent gender appear to trend toward mediating the relationship between ssb intake and parental monitoring (est = 0.017, CI= -0.001:0.042)
-Will only carry forward monitoring
+
 
 # Is mediation (parental gender) moderated by child sex (female < male) ?
 
