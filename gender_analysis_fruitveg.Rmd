@@ -1,0 +1,207 @@
+---
+title: "gender_analysis_fruitveg"
+output: html_document
+date: '2022-10-12'
+---
+
+This is an analysis based on the paper "The association of food parenting practices with adolescents’ dietary
+behaviors differ by youth gender, but not by parent gender" by Deslippe et al., 2022
+
+```{r message=FALSE, warning=FALSE, results='hide'}
+library(vroom)
+library(plyr)
+library(ggplot2)
+library(psych)
+library(tidyverse)
+library(OpenMx)
+library(dplyr)
+library(lavaan)
+library(semPlot)
+library(knitr)
+library(kableExtra)
+library(GGally)
+```
+
+```{r message=FALSE, warning=FALSE, results='hide'}
+df<-vroom("/Users/gracer/Library/CloudStorage/OneDrive-SharedLibraries-UniversityofWyoming/M2AENAD Lab - Documents/RESEARCH/multi-state/data/final_df.csv")
+names(df)
+```
+## Check normality of Fast Food
+```{r}
+str(df)
+hist(df$FV_freq) # not normal
+min(df$FV_freq)
+C = 1 #needed to correct for 0s
+hist(log10(df$FV_freq+C))# good
+df$FV_log10<-log10(df$FV_freq+C)
+df$FV_log10_scale<-scale(df$FV_log10)
+hist(df$FV_log10_scale)# good
+```
+
+# Fast Food Models
+## Basic model
+food security, parent education, child sex, race/ethnicity, independent eating occasions (from covar analysis)
+```{r}
+m1 <-'FV_log10_scale ~ IND_scale + EXP_scale + AVA_log10_scale + MON_scale + AUT_sqrt_scale + MOD_log10_scale + parent_gender  + RACE_ETH + child_SEX + parent_ED + FOOD_SEC_CAT + iEO_log10'
+```
+
+## Confirmatory factor analysis 
+```{r}
+fit1 <- cfa(m1, data = df)
+```
+
+## Summary of SSB CFA
+```{r}
+summary(fit1, standardized=T,rsquare=T)
+```
+# Summary of CFA
+IND_scale, MON_scale, MOD_log10_scal, parent_ED, FOOD_SEC_CAT, iEO_log10 
+## Visualization of Junk food CFA
+```{r}
+semPaths(fit1, 'std', layout = 'spring')
+```
+```{r}
+df$parent_gender<-as.ordered(df$parent_gender)
+```
+
+## Interaction models
+IND_scale, AVA_log10_scal, MON_scale
+```{r}
+med_MOD_ <- "
+         # mediator, a path
+         parent_gender ~ a*MOD_log10_scale+child_SEX+FOOD_SEC_CAT+iEO_log10
+
+         # b path
+         FV_log10_scale ~ b*parent_gender
+
+         # direct effect 
+         FV_log10_scale ~ cp * MOD_log10_scale+child_SEX+FOOD_SEC_CAT+iEO_log10
+
+         # indirect 
+         ab := a*b
+         
+         # Total effects
+         total := cp + (a*b)
+         "
+med_MON_ <- "
+         # mediator, a path
+         parent_gender ~ a*MON_scale+child_SEX+FOOD_SEC_CAT+iEO_log10
+
+         # b path
+         FV_log10_scale ~ b*parent_gender
+
+         # direct effect 
+         FV_log10_scale ~ cp * MON_scale+child_SEX+FOOD_SEC_CAT+iEO_log10
+
+         # indirect 
+         ab := a*b
+         
+         # Total effects
+         total := cp + (a*b)
+         "
+med_IND_ <- "
+         # mediator, a path
+         parent_gender ~ a*IND_scale+child_SEX+FOOD_SEC_CAT+iEO_log10
+
+         # b path
+         FV_log10_scale ~ b*parent_gender
+
+         # direct effect 
+         FV_log10_scale ~ cp * IND_scale+child_SEX+FOOD_SEC_CAT+iEO_log10
+
+         # indirect 
+         ab := a*b
+         
+         # Total effects
+         total := cp + (a*b)
+         "
+```
+
+
+
+```{r}
+set.seed(1234)
+```
+
+### Running the models
+```{r}
+IND_sem2 <- sem(med_IND_2, data = df, se = "bootstrap", bootstrap = 5000, estimator = "DWLS")
+
+IND_sem <- sem(med_IND_, data = df, se = "bootstrap", bootstrap = 5000, estimator = "DWLS")
+MON_sem <- sem(med_MON_, data = df, se = "bootstrap", bootstrap = 5000, estimator = "DWLS")
+MOD_sem <- sem(med_MOD_, data = df, se = "bootstrap", bootstrap = 5000, estimator = "DWLS")
+```
+```{r}
+m2<-lm(FV_log10_scale ~ MOD_log10_scale*parent_gender  + RACE_ETH + child_SEX + parent_ED + FOOD_SEC_CAT + iEO_log10, data = df)
+summary(m2)
+```
+
+### Parameter estimates 
+```{r}
+summary(IND_sem, standardized = TRUE) 
+summary(MON_sem, standardized = TRUE) 
+summary(MOD_sem, standardized = TRUE) 
+```
+```{r}
+summary(lm(m1, data = df))
+```
+
+# Summary of results
+* Indulgence related (0.06)
+* Indulgence trending
+## Model with grouping
+```{r}
+IND_group <- ' 
+             # mediator, a path
+             parent_gender ~ c(ag1,ag2)*IND_scale+FOOD_SEC_CAT+iEO_log10
+             FV_log10_scale ~ c(bg1,bg2)*parent_gender 
+           
+             # direct effect
+             FV_log10_scale ~  c(cg1, cg2)*IND_scale+FOOD_SEC_CAT+iEO_log10
+
+           # indirect effect (a*b)
+             abg1 := ag1*bg1 #group 1
+             abg2 := ag2*bg2 #group 2
+
+           # total effect
+             totalg1 := cg1 + (ag1*bg1)
+             totalg2 := cg2 + (ag2*bg2)
+         '
+```
+
+
+## Running group models
+```{r}
+fit_group_IND <- sem(IND_group, data = df, group="child_SEX", 
+                 se="boot", bootstrap=5000, meanstructure = TRUE, estimator = "DWLS")
+```
+
+```{r}
+fit_group_IND <- sem(IND_group, data = df, group="child_SEX", 
+                 se="boot", bootstrap=5000, meanstructure = TRUE, estimator = "DWLS")
+```
+
+```{r}
+summary(fit_group_IND, fit.measures=T, standardized=T, ci=TRUE)
+```
+
+```{r}
+all.constraints<- 'ag1 == ag2
+                  bg1 == bg2
+                  cg1 == cg2'
+```
+
+
+```{r}
+lavTestWald(fit_group_IND, #the name of the Lavaan 'fitted' object
+            constraints = all.constraints) #the name of our previously specified paths that we would like to test
+```
+* Child gender is not related
+
+```{r}
+#save.image(file = "/Users/gracer/Library/CloudStorage/OneDrive-SharedLibraries-UniversityofWyoming/M2AENAD Lab - Documents/RESEARCH/multi-state/data/FVanalysis.RData")
+```
+
+```{r}
+load(file = "/Users/gracer/Library/CloudStorage/OneDrive-SharedLibraries-UniversityofWyoming/M2AENAD Lab - Documents/RESEARCH/multi-state/data/FVanalysis.RData")
+```
