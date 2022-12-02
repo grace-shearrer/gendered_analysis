@@ -138,7 +138,53 @@ summary(AVA_sem,  standardized = TRUE)
 summary(IND_sem, standardized = TRUE) 
 summary(MON_sem, standardized = TRUE) 
 ```
+```{r}
+makincopies<-function(X, Y){
+  sumsum<-describeBy(X, Y)
+  test<-map2_dfr(as.data.frame(sumsum[1]), as.data.frame(sumsum[2]), ~ tibble(A = .x, B = .y))
+  nms<-c('var','n', 'mean','sd','median','trimmed','mad','min','max','range','skew','kurtosis','se')
+  df_transpose = as.data.frame(t(test))
+  colnames(df_transpose)<-nms
+  df_transpose<-rownames_to_column(df_transpose)
+  return(df_transpose)
+}
+cbPalette <- c( "#6D8DF3","#CC4F7E")
+summarized_df<-makincopies(df$IND_scale, df$parent_gender)
+summarized_df2<-makincopies(df$JUNK_log10_scale, df$parent_gender)
+```
 
+A = male
+B = Female
+```{r}
+ggplot(summarized_df, aes(x=rowname, y=mean, fill = rowname)) + 
+    geom_bar(position=position_dodge(), stat="identity") +
+    geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd),
+                  width=.2,                    # Width of the error bars
+                  position=position_dodge(.9))+ labs(title = "Indulgence by parent gender", x = "Parent gender", y = "Indulgence (scaled)") + scale_fill_manual(values=cbPalette) + scale_x_discrete(labels=c("A" = "Male", "B" = "Female")) + theme_classic()+ theme(legend.position = "none")
+```
+
+```{r}
+ggplot(summarized_df2, aes(x=rowname, y=mean, fill = rowname)) + 
+    geom_bar(position=position_dodge(), stat="identity") +
+    geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd),
+                  width=.2,                    # Width of the error bars
+                  position=position_dodge(.9))+ labs(title = "Junk food intake intake by parent gender", x = "Parent gender", y = "Junk food intake intake (log10 transformed and scaled)") + scale_fill_manual(values=cbPalette) + scale_x_discrete(labels=c("A" = "Male", "B" = "Female")) + theme_classic()+ theme(legend.position = "none")
+```
+
+0 = male
+1 = female
+```{r}
+
+ggplot(df, aes(x=IND_scale, y=JUNK_log10_scale, color=parent_gender)) +geom_smooth(method=lm)  +
+    geom_point(shape=1) + theme_classic() + labs(title = "Interaction of parent gender on indulgence and junk food intake", x = "Indulgence (scaled)", y = "Junk food intake (log10 transformed and scaled)", color = "Parent gender \n0 is male, 1 is female") + scale_colour_manual(values=cbPalette)
+
+```
+
+```{r}
+labels <- list(child_SEX = "child sex", IND_scale = "Indulgence", iEO_log10 = "Independent eating occasions", parent_gender = "Parent gender", FOOD_SEC_CAT = "Food security", JUNK_log10_scale = "Junk food intake")
+
+lavaanPlot(model = IND_sem,labels = labels, node_options = list(shape = "box", fontname = "Helvetica"), edge_options = list(color = "grey"), coefs = T, sig = .1, stand = TRUE)
+```
 
 
 # Summary of results
