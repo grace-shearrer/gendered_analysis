@@ -5,7 +5,11 @@ date: '2022-09-23'
 ---
 
 ```{r}
+<<<<<<< HEAD
 df<-vroom("/Users/gracer/OneDrive - University of Wyoming/0. Lab/M2AENAD Lab - Documents/RESEARCH/multi-state/gender_paper/2. data/fromMaster.csv")
+=======
+df<-vroom("/Users/gracer/Library/CloudStorage/OneDrive-SharedLibraries-UniversityofWyoming/M2AENAD Lab - Documents/RESEARCH/multi-state/data/final_df.csv")
+>>>>>>> 3469b646747130e307be9ff36f713a09851df5c3
 ```
 ```{r}
 names(df)

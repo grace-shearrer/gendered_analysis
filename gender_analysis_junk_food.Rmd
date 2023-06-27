@@ -1,0 +1,247 @@
+---
+title: "gender_analysis_junk_food"
+output: html_document
+date: '2022-10-11'
+---
+
+This is an analysis based on the paper "The association of food parenting practices with adolescents’ dietary
+behaviors differ by youth gender, but not by parent gender" by Deslippe et al., 2022
+
+```{r message=FALSE, warning=FALSE, results='hide'}
+library(vroom)
+library(plyr)
+library(ggplot2)
+library(psych)
+library(tidyverse)
+library(OpenMx)
+library(dplyr)
+library(lavaan)
+library(semPlot)
+library(knitr)
+library(kableExtra)
+library(GGally)
+```
+
+```{r message=FALSE, warning=FALSE, results='hide'}
+df<-vroom("/Users/gracer/Library/CloudStorage/OneDrive-SharedLibraries-UniversityofWyoming/M2AENAD Lab - Documents/RESEARCH/multi-state/data/final_df.csv")
+#df$parent_gender<-as.factor(df$parent_gender)
+#df$child_SEX<-as.factor(df$child_SEX)
+```
+## Check normality of junk food
+```{r}
+hist(df$JUNK_freq) # not normal
+min(df$JUNK_freq)
+C = 1 #needed to correct for 0s
+hist(log10(df$JUNK_freq+C))# good
+df$JUNK_log10<-log10(df$JUNK_freq+C)
+df$JUNK_log10_scale<-scale(df$JUNK_log10)
+hist(df$JUNK_log10_scale)# good
+```
+
+# Junk food Models
+## Basic model
+food security, parent education, child sex, race/ethnicity, independent eating occasions (from covar analysis)
+```{r}
+m1 <-'JUNK_log10_scale ~ IND_scale + EXP_scale + AVA_log10_scale + MON_scale + AUT_sqrt_scale + MOD_log10_scale + parent_gender  + RACE_ETH + child_SEX + parent_ED + FOOD_SEC_CAT + iEO_log10'
+```
+
+## Confirmatory factor analysis 
+```{r}
+fit1 <- cfa(m1, data = df)
+```
+
+## Summary of SSB CFA
+```{r}
+summary(fit1, standardized=T,rsquare=T)
+```
+# Summary of CFA
+IND_scale, AVA_log10_scal, MON_scale
+FOOD_SEC_CAT, iEO_log10
+## Visualization of Junk food CFA
+```{r}
+semPaths(fit1, 'std', layout = 'spring')
+```
+```{r}
+df$parent_gender<-as.ordered(df$parent_gender)
+```
+
+## Interaction models
+IND_scale, AVA_log10_scal, MON_scale
+
+```{r}
+med_IND_ <- "
+         # mediator, a path
+         parent_gender ~ a*IND_scale+child_SEX+FOOD_SEC_CAT+iEO_log10
+
+         # b path
+         JUNK_log10_scale ~ b*parent_gender
+
+         # direct effect 
+         JUNK_log10_scale ~ cp * IND_scale+child_SEX+FOOD_SEC_CAT+iEO_log10
+
+         # indirect 
+         ab := a*b
+         
+         # Total effects
+         total := cp + (a*b)
+"
+med_AVA_ <- "
+         # mediator, a path
+         parent_gender ~ a*AVA_log10_scale+child_SEX+FOOD_SEC_CAT+iEO_log10
+
+         # b path
+         JUNK_log10_scale ~ b*parent_gender
+
+         # direct effect 
+         JUNK_log10_scale ~ cp * AVA_log10_scale+child_SEX+FOOD_SEC_CAT+iEO_log10
+
+         # indirect 
+         ab := a*b
+         
+         # Total effects
+         total := cp + (a*b)
+         "
+med_MON_ <- "
+         # mediator, a path
+         parent_gender ~ a*MON_scale+child_SEX+FOOD_SEC_CAT+iEO_log10
+
+         # b path
+         JUNK_log10_scale ~ b*parent_gender
+
+         # direct effect 
+         JUNK_log10_scale ~ cp * MON_scale+child_SEX+FOOD_SEC_CAT+iEO_log10
+
+         # indirect 
+         ab := a*b
+         
+         # Total effects
+         total := cp + (a*b)
+         "
+```
+
+
+
+```{r}
+set.seed(1234)
+```
+
+### Running the models
+```{r}
+IND_sem <- sem(med_IND_, data = df, se = "bootstrap", bootstrap = 5, estimator = "DWLS")
+AVA_sem <- sem(med_AVA_, data = df, se = "bootstrap", bootstrap = 5, estimator = "DWLS")
+MON_sem <- sem(med_MON_, data = df, se = "bootstrap", bootstrap = 5, estimator = "DWLS")
+```
+
+### Parameter estimates 
+```{r}
+summary(AVA_sem,  standardized = TRUE) 
+summary(IND_sem, standardized = TRUE) 
+summary(MON_sem, standardized = TRUE) 
+```
+```{r}
+makincopies<-function(X, Y){
+  sumsum<-describeBy(X, Y)
+  test<-map2_dfr(as.data.frame(sumsum[1]), as.data.frame(sumsum[2]), ~ tibble(A = .x, B = .y))
+  nms<-c('var','n', 'mean','sd','median','trimmed','mad','min','max','range','skew','kurtosis','se')
+  df_transpose = as.data.frame(t(test))
+  colnames(df_transpose)<-nms
+  df_transpose<-rownames_to_column(df_transpose)
+  return(df_transpose)
+}
+cbPalette <- c( "#6D8DF3","#CC4F7E")
+summarized_df<-makincopies(df$IND_scale, df$parent_gender)
+summarized_df2<-makincopies(df$JUNK_log10_scale, df$parent_gender)
+```
+
+A = male
+B = Female
+```{r}
+ggplot(summarized_df, aes(x=rowname, y=mean, fill = rowname)) + 
+    geom_bar(position=position_dodge(), stat="identity") +
+    geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd),
+                  width=.2,                    # Width of the error bars
+                  position=position_dodge(.9))+ labs(title = "Indulgence by parent gender", x = "Parent gender", y = "Indulgence (scaled)") + scale_fill_manual(values=cbPalette) + scale_x_discrete(labels=c("A" = "Male", "B" = "Female")) + theme_classic()+ theme(legend.position = "none")
+```
+
+```{r}
+ggplot(summarized_df2, aes(x=rowname, y=mean, fill = rowname)) + 
+    geom_bar(position=position_dodge(), stat="identity") +
+    geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd),
+                  width=.2,                    # Width of the error bars
+                  position=position_dodge(.9))+ labs(title = "Junk food intake intake by parent gender", x = "Parent gender", y = "Junk food intake intake (log10 transformed and scaled)") + scale_fill_manual(values=cbPalette) + scale_x_discrete(labels=c("A" = "Male", "B" = "Female")) + theme_classic()+ theme(legend.position = "none")
+```
+
+0 = male
+1 = female
+```{r}
+
+ggplot(df, aes(x=IND_scale, y=JUNK_log10_scale, color=parent_gender)) +geom_smooth(method=lm)  +
+    geom_point(shape=1) + theme_classic() + labs(title = "Interaction of parent gender on indulgence and junk food intake", x = "Indulgence (scaled)", y = "Junk food intake (log10 transformed and scaled)", color = "Parent gender \n0 is male, 1 is female") + scale_colour_manual(values=cbPalette)
+
+```
+
+```{r}
+labels <- list(child_SEX = "child sex", IND_scale = "Indulgence", iEO_log10 = "Independent eating occasions", parent_gender = "Parent gender", FOOD_SEC_CAT = "Food security", JUNK_log10_scale = "Junk food intake")
+
+lavaanPlot(model = IND_sem,labels = labels, node_options = list(shape = "box", fontname = "Helvetica"), edge_options = list(color = "grey"), coefs = T, sig = .1, stand = TRUE)
+```
+
+
+# Summary of results
+Parent gender is not related to monitoring, availability, nor indulgence
+
+# Is mediation (parental gender) moderated by child sex (female < male) ?
+
+## Model with grouping
+```{r}
+MON_group <- ' 
+             # mediator, a path
+             parent_gender ~ c(ag1,ag2)*MON_scale+FOOD_SEC_CAT+iEO_log10
+             JUNK_log10_scale ~ c(bg1,bg2)*parent_gender 
+           
+             # direct effect
+             JUNK_log10_scale ~  c(cg1, cg2)*MON_scale+FOOD_SEC_CAT+iEO_log10
+
+           # indirect effect (a*b)
+             abg1 := ag1*bg1 #group 1
+             abg2 := ag2*bg2 #group 2
+
+           # total effect
+             totalg1 := cg1 + (ag1*bg1)
+             totalg2 := cg2 + (ag2*bg2)
+         '
+```
+
+
+## Running group models
+```{r}
+fit_group_MON <- sem(MON_group, data = df, group="child_SEX", 
+                 se="boot", bootstrap=5000, meanstructure = TRUE, estimator = "DWLS")
+```
+
+```{r}
+summary(fit_group_MON, fit.measures=T, standardized=T, ci=TRUE)
+```
+
+```{r}
+all.constraints<- 'ag1 == ag2
+                  bg1 == bg2
+                  cg1 == cg2'
+```
+
+
+```{r}
+lavTestWald(fit_group_MON, #the name of the Lavaan 'fitted' object
+            constraints = all.constraints) #the name of our previously specified paths that we would like to test
+```
+# Summary of moderation results
+Although parent gender doesn't mediate junk food, it appears that child sex trends to moderate the effect at least in terms of monitoring.
+
+```{r}
+#save.image(file = "/Users/gracer/Library/CloudStorage/OneDrive-SharedLibraries-UniversityofWyoming/M2AENAD Lab - Documents/RESEARCH/multi-state/data/Junkanalysis.RData")
+```
+
+```{r}
+load(file = "/Users/gracer/Library/CloudStorage/OneDrive-SharedLibraries-UniversityofWyoming/M2AENAD Lab - Documents/RESEARCH/multi-state/data/Junkanalysis.RData")
+```
+
