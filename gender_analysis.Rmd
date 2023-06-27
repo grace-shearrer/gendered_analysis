@@ -6,7 +6,11 @@ output:
 ---
 
 ```{r}
+<<<<<<< HEAD
 library(vroom) 
+=======
+library(vroom)
+>>>>>>> 3469b646747130e307be9ff36f713a09851df5c3
 library(plyr)
 library(ggplot2)
 library(psych)
@@ -102,6 +106,10 @@ df1<-df0 %>%
                               '1 time per day' = 1,
                               '2 times per day' = 2,
                               '3 or more times per day' = 3)))
+<<<<<<< HEAD
+=======
+
+>>>>>>> 3469b646747130e307be9ff36f713a09851df5c3
 ```
 
 ## Junk Foods
@@ -310,9 +318,12 @@ df8$INCOME<-as.factor(df8$Q6.17)
 ```
 
 ## Race ethnicity
+<<<<<<< HEAD
 Change to
 Q6.19 or 18
 Q6.7 or 6.6
+=======
+>>>>>>> 3469b646747130e307be9ff36f713a09851df5c3
 ```{r}
 summary(as.factor(df8$Q1.21_4))
 df9<-df8 %>% 
@@ -483,7 +494,11 @@ summary(final_df)
 
 
 ```{r}
+<<<<<<< HEAD
 #write.table(final_df, "/Users/gracer/Library/CloudStorage/OneDrive-SharedLibraries-UniversityofWyoming/M2AENAD Lab - Documents/RESEARCH/multi-state/data/final_df.csv", row.names = F, sep = ",")
+=======
+write.table(final_df, "/Users/gracer/Library/CloudStorage/OneDrive-SharedLibraries-UniversityofWyoming/M2AENAD Lab - Documents/RESEARCH/multi-state/data/final_df.csv", row.names = F, sep = ",")
+>>>>>>> 3469b646747130e307be9ff36f713a09851df5c3
 ```
 
 ```{r}

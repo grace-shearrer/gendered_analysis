@@ -1,0 +1,75 @@
+---
+title: "Gendered perspective paper - matching"
+output: html_notebook
+---
+```{r}
+library(vroom)
+library(plyr)
+library(ggplot2)
+library(psych)
+```
+
+
+
+```{r}
+df<-vroom("~/University of Wyoming/M2AENAD Lab - Documents/RESEARCH/multi-state/data/final_df.csv")
+df$parent_gender<-as.factor(df$parent_gender)
+df$parent_ED<-as.factor(df$parent_ED)
+df$INCOME <-as.factor(df$INCOME)
+df$child_SEX <-as.factor(df$child_SEX)
+df$RACE_ETH <-as.factor(df$RACE_ETH)
+```
+# Matching
+Need to match on parent ED, income, child sex and race ethnicity 
+```{r}
+summary(df$parent_gender)
+df_male<-subset(df, df$parent_gender == 'Male')
+df_female<-subset(df, df$parent_gender == 'Female')
+```
+
+```{r}
+test <- merge(df_male, df_female, by = c('parent_ED','INCOME','RACE_ETH'))
+```
+
+```{r}
+View(test)
+test<-test[complete.cases(test),]
+names(test)
+duplicated(test[5:16])
+test<-test[!duplicated(test[5:16]), ]
+```
+
+
+```{r}
+summary(test)
+```
+
+
+```{r}
+names(test)
+set1<-test[1:3]
+set_male<-test[4:16]
+set_female<-test[17:29]
+```
+
+```{r}
+set_male<-cbind(set1, set_male)
+names(set_male)<-c("parent_ED","INCOME","RACE_ETH","SSB_freq","JUNK_freq",    
+"SWEET_freq","FAST_freq","FV_freq","INDULGENCE","EXPECATION",   
+"AVAILABILE","MONITORING","AUTONOMY","MODELING","parent_gender",
+"child_SEX")
+set_female<-cbind(set1, set_female)
+names(set_female)<-c("parent_ED","INCOME","RACE_ETH","SSB_freq","JUNK_freq",    
+"SWEET_freq","FAST_freq","FV_freq","INDULGENCE","EXPECATION",   
+"AVAILABILE","MONITORING","AUTONOMY","MODELING","parent_gender",
+"child_SEX")
+```
+
+```{r}
+matched_df<-rbind(set_male, set_female)
+head(matched_df)
+```
+```{r}
+write.table(matched_df, "~/University of Wyoming/M2AENAD Lab - Documents/RESEARCH/multi-state/data/matched_df.csv", row.names = F, sep = ",")
+```
+
