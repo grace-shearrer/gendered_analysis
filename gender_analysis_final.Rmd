@@ -1,0 +1,290 @@
+---
+title: "gender_analysis_final"
+output: html_document
+date: '2023-6-27'
+---
+
+This is an analysis based on the paper "The association of food parenting practices with adolescents’ dietary
+behaviors differ by youth gender, but not by parent gender" by Deslippe et al., 2022
+
+Redoing this with Yichen's dataset
+
+```{r message=FALSE, warning=FALSE, results='hide'}
+library(vroom)
+library(plyr)
+library(ggplot2)
+library(psych)
+library(tidyverse)
+library(OpenMx)
+library(dplyr)
+library(lavaan)
+library(semPlot)
+library(knitr)
+library(kableExtra)
+library(GGally)
+library(lavaanPlot)
+library(lm.beta)
+library(modelsummary)
+
+library(boot)
+source("~/Downloads/x.boot.r")  
+
+```
+# Why
+The previous notebook I tried to normalize the data. When I normalized the data the log function actually made everything worse. I am trying to fit the non-normal data this time. 
+
+```{r message=FALSE, warning=FALSE, results='hide'}
+df<-vroom("/Users/gracer/Library/CloudStorage/OneDrive-UniversityofWyoming/0. Lab/M2AENAD Lab - Documents/RESEARCH/multi-state/gender_paper/2. data/iEOparent_food.csv")
+#names(df)
+```
+
+## Mean center
+```{r}
+scaled_data <- 
+  df %>%
+  mutate(SSB_freq = scale(SSB, scale = FALSE),
+         JUNK_freq = scale(Junk.foods, scale = FALSE),
+         SWEET_freq = scale(Sugary.foods, scale = FALSE),
+         FV_freq = scale(Fruits.vegetables, scale = FALSE),
+         INDULGENCE = scale(Indulgence, scale = FALSE),
+         EXPECATION = scale(Expectations, scale = FALSE),
+         AVAILABILE = scale(Availability, scale = FALSE),
+         MONITORING = scale(Monitoring, scale = FALSE),
+         AUTONOMY = scale(Autonomy.Support, scale = FALSE),
+         MODELING = scale(Modeling, scale = FALSE)
+         )
+```
+
+child sex = sex, Q6.3
+parent sex = Q6.11
+ethnicity = Q6.18
+```{r}
+summary(as.factor(df$Q6_18))
+names(df)
+```
+# Renaming factors for the tables
+```{r}
+df_factors<- df %>% 
+  mutate(
+    Marital_status = fct_recode(as.factor(Marital.status),
+                      "Not married" = "1",
+                      "Married" = "2"),
+    Parent_gender = fct_recode(as.factor(Q6_11),
+                      "Male" = "1",
+                      "Female" = "2"),
+    Ethnicity = fct_recode(as.factor(Q6_18),
+                      "Male" = "1",
+                      "Female" = "2"),
+        Income = fct_recode(as.factor(Q6_17),
+                      "Below $25,000" = "1",
+                      "$65,000 - $84,999" = "4",
+                      "$45,000 - $64,999" = "3",
+                      "$85,000 or more" = "5",
+                      "$25,000 - $44,999" = "2",
+                      "Prefer not to answer" = "6"
+                      ),
+    child_sex = fct_recode(as.factor(Q6_3),
+                      "Male" = "1",
+                      "Female" = "2"
+                      ),
+    education = fct_recode(as.factor(Q6_14),
+                      "4-year college, university degree or advanced degree" = "4",
+                      "Some college or technical school" = "3",
+                      "Received high school diploma or GED" = "2",
+                      "Have not completed high school" = "1"
+                      
+                      ),
+    ethnicity = fct_recode(as.factor(Q6_18),
+                      "Hispanic or Latinx" = "1",
+                      "Not Hispanic or Latinx" = "2"
+                      
+                      )
+  )
+```
+
+
+# Making descriptive table
+## Table 1. Sample demographics by parent sex
+### Factors
+```{r}
+#(`Flipper length (mm)` = flipper_length_mm)
+
+datasummary((`Marital status` = Marital_status) + Race+ (`Ethnicity` = ethnicity)+ Income + (`Child sex` = child_sex) + (`Food security` = Food.security) + (`Education` = education) ~ (`Parent gender` = Parent_gender) * Percent("col")+1*Percent("col"),
+            data = df_factors,
+            output = '/Users/gracer/Library/CloudStorage/OneDrive-UniversityofWyoming/0. Lab/M2AENAD Lab - Documents/RESEARCH/multi-state/gender_paper/table1.docx')
+```
+
+### Continuous
+```{r}
+MeanSD <- function(x) paste0(round(mean(x, na.rm = TRUE),2),'(', round(sd(x, na.rm = TRUE),2), ')')
+
+```
+
+```{r}
+datasummary((`Autonomy support` = Autonomy.Support) + Monitoring + Availability + Indulgence + Modeling + Expectations + (`SSB consumption frequency` = SSB) + (`Junk food consumption frequency` = Junk.foods) + (`Fruit and Vegetable consumption frequency` = Fruits.vegetables) + (`Sugary food consumption frequency` = Sugary.foods) + (`Independent eating occassion frequency` = iEO) ~ Parent_gender* (MeanSD) + 1*(MeanSD),
+            data = df_factors,
+            output = '/Users/gracer/Library/CloudStorage/OneDrive-UniversityofWyoming/0. Lab/M2AENAD Lab - Documents/RESEARCH/multi-state/gender_paper/table1_b.docx')
+```
+
+### Check differences
+```{r}
+summary(df_factors$Parent_gender)
+t.test(df_factors$iEO ~ df_factors$Parent_gender)
+```
+```{r}
+mytable <- xtabs(~Parent_gender+Marital.status, data=df_factors)
+summary(mytable) # chi-square test of indepedence
+```
+
+# Checking regressions against main paper for sanity
+```{r}
+check_FV_auto<-lm(Fruits.vegetables ~ Autonomy.Support +  Age + Race + Sex + Education + Food.security + Marital.status + iEO, data = df )
+summary(check_FV_auto) # b values match the parent reporting parenting practice
+```
+
+## Basic model
+food security, parent education, child sex, race/ethnicity, independent eating occasions (from covar analysis)
+```{r}
+mFV <-'FV_freq ~ INDULGENCE + EXPECATION + AVAILABILE + MONITORING + AUTONOMY + MODELING + Q6_11  + Race + Sex + Education + Food.security + iEO'
+mSSB <-'SSB_freq ~ INDULGENCE + EXPECATION + AVAILABILE + MONITORING + AUTONOMY + MODELING + Q6_11  + Race + Sex + Education + Food.security + iEO'
+mJUNK <-'JUNK_freq ~ INDULGENCE + EXPECATION + AVAILABILE + MONITORING + AUTONOMY + MODELING + Q6_11  + Race + Sex + Education + Food.security + iEO'
+mSWEET <-'SWEET_freq ~ INDULGENCE + EXPECATION + AVAILABILE + MONITORING + AUTONOMY + MODELING + Q6_11  + Race + Sex + Education + Food.security + iEO'
+```
+
+## Confirmatory factor analysis 
+```{r}
+fit_FV <- cfa(m1, data = scaled_data)
+```
+## Refactor levels of race
+```{r}
+scaled_data$Race <- factor(scaled_data$Race, levels = c("Non-Hispanic White","Non-Hispanic Black", "Asian", "Hispanic", "Other races"))
+```
+
+
+## Summary
+Basic models were not significant thus bootstrapping was not required
+```{r}
+models <- list(
+  "Fruits and Vegetables"     = lm(mFV, data = scaled_data),
+  "SSB"     = lm(mSSB, data = scaled_data),
+  "Junk Foods"     = lm(mJUNK, data = scaled_data),
+  "Sugary foods"     = lm(mSWEET, data = scaled_data)
+)
+
+modelsummary(
+  models,
+  fmt = 1,
+  estimate  = "{estimate} [{conf.low}, {conf.high}] {stars}",
+  statistic = NULL,
+  coef_omit = "Intercept",
+  coef_rename = c("Q6_11" = "parent sex", "RaceHispanic" = "Hispanic", "RaceNon-Hispanic Black" = "Non-Hispanic Black","RaceNon-Hispanic White" = "Non-Hispanic White", "SexGirl" = "Child girl", "RaceAsian" = "Asian", "RaceOther races" = "Other races"), output = "/Users/gracer/Library/CloudStorage/OneDrive-UniversityofWyoming/0. Lab/M2AENAD Lab - Documents/RESEARCH/multi-state/gender_paper/linearmodels_table.docx")
+```
+# Summary of CFA
+INDULGENCE
+MONITORING
+iEO
+```{r}
+parent <- "INDULGENCE"
+food <- "FV_freq"
+my_string <- sprintf("this is my %s string", new)
+```
+
+
+```{r}
+modelr <- function(parent,food){
+  sprintf("
+         # mediator, a path
+         Q6_11 ~ a*%s+iEO
+
+         # b path
+        %s ~ b*Q6_11
+
+         # direct effect 
+         %s ~ cp * %s+iEO
+
+         # indirect 
+         ab := a*b
+         
+         # Total effects
+         total := cp + (a*b)
+        ",parent,food, food, parent)
+}
+```
+
+```{r}
+check <-sem(modelr("MONITORING","JUNK_freq"), data = scaled_data, estimator = "MLM")
+summary(check)
+```
+
+```{r}
+food_list <- list("FV_freq","SSB_freq","JUNK_freq","SWEET_freq")
+
+```
+
+```{r}
+sublist <- list()
+for (y in food_list){
+    model<-modelr("INDULGENCE",y)
+    output <- sem(model, data = scaled_data, estimator = "MLM")
+    sublist[[y]] <- list(output)
+}
+```
+
+
+```{r}
+modelsummary(
+  c(sublist$FV_freq,
+    sublist$SSB_freq,
+    sublist$JUNK_freq, 
+    sublist$SWEET_freq),
+  fmt = 1,
+  estimate  = "{estimate} [{conf.low}, {conf.high}],{stars}",
+  statistic = NULL,
+  )
+
+```
+ 
+```{r}
+sublist2 <- list()
+for (y in food_list){
+    model<-modelr("MONITORING",y)
+    output <- sem(model, data = scaled_data, estimator = "MLM")
+    sublist2[[y]] <- list(output)
+}
+```
+
+
+```{r}
+cm <- c('Q6_11 ~ MONITORING'    = 'Monitoring by parent gender',
+        'FV_freq ~ Q6_11' = 'Fruit and vegetable intake by parent gender',
+        'FV_freq ~ MONITORING' = 'Fruit and vegetable intake by monitoring',
+        'SSB_freq ~ Q6_11' = 'SSB intake by parent gender',
+        'SSB_freq ~ MONITORING' = 'SSB intake by monitoring',
+        'JUNK_freq ~ Q6_11' = 'Junk food intake by parent gender',
+        'JUNK_freq ~ MONITORING	' = 'Junk food intake by monitoring',
+        'SWEET_freq ~ Q6_11' = 'Sugary food intake by parent gender',
+        'SWEET_freq ~ MONITORING' = 'Sugary food intake by monitoring'
+        )
+
+modelsummary(
+  c(sublist2$FV_freq,
+    sublist2$SSB_freq,
+    sublist2$JUNK_freq, 
+    sublist2$SWEET_freq),
+  fmt = 1,
+  estimate  = "{estimate} [{conf.low}, {conf.high}],{stars}",
+  statistic = NULL,
+  )
+```
+
+
+```{r}
+load(file = "/Users/gracer/Library/CloudStorage/OneDrive-UniversityofWyoming/0. Lab/M2AENAD Lab - Documents/RESEARCH/multi-state/gender_paper/gender_analysis.RData")
+
+```
+
+
+```{r}
+#save.image(file = "/Users/gracer/Library/CloudStorage/OneDrive-UniversityofWyoming/0. Lab/M2AENAD Lab - Documents/RESEARCH/multi-state/gender_paper/gender_analysis.RData")
+```
+

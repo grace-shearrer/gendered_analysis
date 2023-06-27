@@ -1,0 +1,62 @@
+---
+title: "gender_analysis_demos"
+output: html_document
+date: '2022-10-12'
+---
+
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(psych)
+```
+
+
+```{r message=FALSE, warning=FALSE, results='hide'}
+df<-vroom("/Users/gracer/Library/CloudStorage/OneDrive-SharedLibraries-UniversityofWyoming/M2AENAD Lab - Documents/RESEARCH/multi-state/data/final_df.csv")
+names(df)
+```
+
+```{r}
+C = 1 #needed to correct for 0s
+df$JUNK_log10<-log10(df$JUNK_freq+C)
+
+C = 1 #needed to correct for 0s
+hist(log10(df$FAST_freq+C))# good
+df$FAST_log10<-log10(df$FAST_freq+C)
+
+C = 1 #needed to correct for 0s
+hist(log10(df$SWEET_freq+C))# good
+df$SWEET_log10<-log10(df$SWEET_freq+C)
+
+C = 1 #needed to correct for 0s
+df$FV_log10<-log10(df$FV_freq+C)
+
+
+```
+
+```{r}
+names(df)
+```
+
+```{r}
+df %>%
+  group_by(parent_gender) %>%
+  summarise(child_SEX = n()) %>%
+  mutate(freq = child_SEX / sum(child_SEX))
+
+chisq <- chisq.test(df$parent_gender, df$FOOD_SEC_CAT)
+chisq
+
+
+t.test(iEO_log10 ~ parent_gender, data = df)
+
+describeBy(df$iEO, df$parent_gender)
+
+summary(as.factor(df$FOOD_SEC_CAT))
+
+x<-df$MODELING
+describe(x)
+describeBy(x, df$parent_gender)
+```
+
