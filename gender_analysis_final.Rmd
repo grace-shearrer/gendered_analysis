@@ -278,17 +278,6 @@ modelsummary(
 ```
 
 
-```{r}
-load(file = "/Users/gracer/Library/CloudStorage/OneDrive-UniversityofWyoming/0. Lab/M2AENAD Lab - Documents/RESEARCH/multi-state/gender_paper/gender_analysis.RData")
-
-```
-
-
-```{r}
-#save.image(file = "/Users/gracer/Library/CloudStorage/OneDrive-UniversityofWyoming/0. Lab/M2AENAD Lab - Documents/RESEARCH/multi-state/gender_paper/gender_analysis.RData")
-```
-
-
 8/31/23
 
 Random selection
@@ -418,3 +407,20 @@ modelsummary(
   statistic = NULL,
   )
 ```
+
+
+12/7/23
+
+
+```{r}
+load(file = "/Users/gracer/Library/CloudStorage/OneDrive-UniversityofWyoming/0. Lab/M2AENAD Lab - Documents/RESEARCH/multi-state/gender_paper/gender_analysis.RData")
+
+```
+
+
+```{r}
+#save.image(file = "/Users/gracer/Library/CloudStorage/OneDrive-UniversityofWyoming/0. Lab/M2AENAD Lab - Documents/RESEARCH/multi-state/gender_paper/gender_analysis.RData")
+```
+
+
+
