@@ -1,7 +1,7 @@
 ---
 title: "gender_analysis_final"
 output: html_document
-date: '2023-6-27'
+date: '2023-12-07'
 ---
 
 This is an analysis based on the paper "The association of food parenting practices with adolescents’ dietary
@@ -212,7 +212,7 @@ modelr <- function(parent,food){
 ```
 
 ```{r}
-check <-sem(modelr("MONITORING","JUNK_freq"), data = scaled_data, estimator = "MLM")
+check <-sem(modelr("INDULGENCE","SSB_freq"), data = scaled_data, estimator = "MLM")
 summary(check)
 ```
 
@@ -288,3 +288,133 @@ load(file = "/Users/gracer/Library/CloudStorage/OneDrive-UniversityofWyoming/0. 
 #save.image(file = "/Users/gracer/Library/CloudStorage/OneDrive-UniversityofWyoming/0. Lab/M2AENAD Lab - Documents/RESEARCH/multi-state/gender_paper/gender_analysis.RData")
 ```
 
+
+8/31/23
+
+Random selection
+```{r}
+summary(as.factor(m_data$Q6_11))
+f_data <-subset(scaled_data, scaled_data$Q6_11 == 2)
+f_sub_data<-f_data[sample(nrow(f_data), 211), ]
+m_data <-subset(scaled_data, scaled_data$Q6_11 == 1)
+
+sub_data <- rbind(m_data, f_sub_data)
+summary(as.factor(sub_data$Q6_11))
+```
+
+```{r}
+sub_sublist <- list()
+n = 100000
+my_range <- 1:n
+for (x in my_range){
+    #separate females and randomly sample
+    f_data <-subset(scaled_data, scaled_data$Q6_11 == 2)
+    f_sub_data<-f_data[sample(nrow(f_data), 211), ]
+    #separate males
+    m_data <-subset(scaled_data, scaled_data$Q6_11 == 1)
+    #recombine the male and subset female data
+    sub_data <- rbind(m_data, f_sub_data)
+    sub_data$Race <- factor(sub_data$Race, levels = c("Non-Hispanic White","Non-Hispanic Black", "Asian", "Hispanic", "Other races"))
+    sub_model<-modelr("INDULGENCE","SSB")
+    sub_output <- summary(sem(sub_model, data = sub_data, estimator = "MLM"))
+    sub_sublist[[x]] <- list(sub_output$PE[11,])
+
+}
+
+null<-rep(0.05, each=n)
+SSB_med_df<-bind_rows(sub_sublist, .id = "column_label")
+t.test(SSB_med_df$pvalue, null)
+SSB_med_df
+```
+
+
+## Refactor levels of race
+```{r}
+sub_data$Race <- factor(sub_data$Race, levels = c("Non-Hispanic White","Non-Hispanic Black", "Asian", "Hispanic", "Other races"))
+```
+
+
+## Summary
+No difference to full sample
+```{r}
+sub_models <- list(
+  "Fruits and Vegetables"     = lm(mFV, data = sub_data),
+  "SSB"     = lm(mSSB, data = sub_data),
+  "Junk Foods"     = lm(mJUNK, data = sub_data),
+  "Sugary foods"     = lm(mSWEET, data = sub_data)
+)
+
+modelsummary(
+  sub_models,
+  fmt = 1,
+  estimate  = "{estimate} [{conf.low}, {conf.high}] {stars}",
+  statistic = NULL,
+  coef_omit = "Intercept",
+  coef_rename = c("Q6_11" = "parent sex", "RaceHispanic" = "Hispanic", "RaceNon-Hispanic Black" = "Non-Hispanic Black","RaceNon-Hispanic White" = "Non-Hispanic White", "SexGirl" = "Child girl", "RaceAsian" = "Asian", "RaceOther races" = "Other races"), output = "/Users/gracer/Library/CloudStorage/OneDrive-UniversityofWyoming/0. Lab/M2AENAD Lab - Documents/RESEARCH/multi-state/gender_paper/test_linearmodels_table.docx")
+```
+
+
+```{r}
+food_list <- list("FV_freq","SSB_freq","JUNK_freq","SWEET_freq")
+
+```
+
+```{r}
+sub_sublist <- list()
+for (y in food_list){
+    sub_model<-modelr("INDULGENCE",y)
+    sub_output <- sem(sub_model, data = sub_data, estimator = "MLM")
+    sub_sublist[[y]] <- list(sub_output)
+}
+```
+
+```{r}
+sub_model<-modelr("MONITORING","SSB_freq")
+test_sum<-summary(sem(sub_model, data = sub_data, estimator = "MLM"))
+test_sum$PE[,1]
+test_sum$PE[11,]
+
+```
+
+```{r}
+test_sum <-modelsummary(
+  c(sub_sublist$FV_freq),
+  fmt = 1,
+  estimate  = "{estimate} [{conf.low}, {conf.high}],{stars}",
+  statistic = NULL,
+  )
+test_sum[1]
+```
+ 
+```{r}
+sublist2 <- list()
+for (y in food_list){
+    model<-modelr("MONITORING",y)
+    output <- sem(model, data = scaled_data, estimator = "MLM")
+    sublist2[[y]] <- list(output)
+}
+```
+
+
+```{r}
+cm <- c('Q6_11 ~ MONITORING'    = 'Monitoring by parent gender',
+        'FV_freq ~ Q6_11' = 'Fruit and vegetable intake by parent gender',
+        'FV_freq ~ MONITORING' = 'Fruit and vegetable intake by monitoring',
+        'SSB_freq ~ Q6_11' = 'SSB intake by parent gender',
+        'SSB_freq ~ MONITORING' = 'SSB intake by monitoring',
+        'JUNK_freq ~ Q6_11' = 'Junk food intake by parent gender',
+        'JUNK_freq ~ MONITORING	' = 'Junk food intake by monitoring',
+        'SWEET_freq ~ Q6_11' = 'Sugary food intake by parent gender',
+        'SWEET_freq ~ MONITORING' = 'Sugary food intake by monitoring'
+        )
+
+modelsummary(
+  c(sublist2$FV_freq,
+    sublist2$SSB_freq,
+    sublist2$JUNK_freq, 
+    sublist2$SWEET_freq),
+  fmt = 1,
+  estimate  = "{estimate} [{conf.low}, {conf.high}],{stars}",
+  statistic = NULL,
+  )
+```
