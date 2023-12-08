@@ -26,10 +26,13 @@ library(lavaanPlot)
 library(lm.beta)
 library(modelsummary)
 
-library(boot)
+#library(boot)
+library(semTools)
 source("~/Downloads/x.boot.r")  
 library(emmeans)
 library(rempsyc)
+library(gridExtra)
+
 ```
 # Why
 The previous notebook I tried to normalize the data. When I normalized the data the log function actually made everything worse. I am trying to fit the non-normal data this time. 
@@ -413,12 +416,7 @@ Found an issue with the model. It doesn't seem possible that sex is a mediator g
 
 ## Return to the basic models
 ### Is there a difference in food intake by parent sex?
-```{r}
-t.test(FV_freq ~ Q6_11, data = scaled_data)
-t.test(SSB_freq ~ Q6_11, data = scaled_data)
-t.test(JUNK_freq ~ Q6_11, data = scaled_data) # no difference
-t.test(SWEET_freq ~ Q6_11, data = scaled_data) # no difference
-```
+
 ```{r}
 modelsT <- list(
   "Difference in parent sex: Fruits and Vegetables"     = t.test(FV_freq ~ Q6_11, data = scaled_data),
@@ -426,8 +424,6 @@ modelsT <- list(
   "Difference in parent sex: Junk Foods"     = t.test(JUNK_freq ~ Q6_11, data = scaled_data),
   "Difference in parent sex: Sugary foods"     = t.test(SWEET_freq ~ Q6_11, data = scaled_data)
 )
-
-
 ```
 
 ```{r}
@@ -498,7 +494,7 @@ modelsummary(
 ## Mediation
 Does indulgence or monitoring mediate consumption of SSB or FV?
 ```{r}
-parent <- "INDULGENCE"
+parent <- "MONITORING"
 food <- "SSB_freq"
 ```
 
@@ -525,18 +521,66 @@ modelr <- function(parent,food){
 ```
 
 ```{r}
-check <-sem(modelr(parent,food), data = scaled_data, estimator = "MLM")
-summary(check)
+checkMonSSB <-sem(modelr("MONITORING","SSB_freq"), data = scaled_data, estimator = "MLM")
+checkIndSSB <-sem(modelr("INDULGENCE","SSB_freq"), data = scaled_data, estimator = "MLM")
+
+checkMonFV <-sem(modelr("MONITORING","FV_freq"), data = scaled_data, estimator = "MLM")
+checkIndFV <-sem(modelr("INDULGENCE","FV_freq"), data = scaled_data, estimator = "MLM")
+```
+
+
+```{r}
+standardizedSolution(checkMonSSB)
 ```
 
 ```{r}
-SSBindBoot <- x.boot(check, R = 10)
-med_INDULGENCE_boot <- x.boot(check, R = 10, verbose = TRUE)
-
+ fct <- function(fit) {
+    lavaan::standardizedSolution(fit)[, "est.std"]
+  }
+```
+## Bootstrap to get p values and confInt
+```{r}
+checkMonSSB_boot <- bootstrapLavaan(checkMonSSB, R = 4999, FUN = fct, iseed = 8970)
+checkIndSSB_boot <- bootstrapLavaan(checkIndSSB, R = 5000, FUN = fct, iseed = 8970)
+checkMonFV_boot <- bootstrapLavaan(checkMonFV, R = 5000, FUN = fct, iseed = 8970)
+checkIndFV_boot <- bootstrapLavaan(checkIndFV, R = 5000, FUN = fct, iseed = 8970)
 ```
 
+## The p values of the important parts
+1, 2, 4, 10, 11
+```{r}
+# The mon SSB failed to converge once and now has an NA, need to remove
+X<-checkMonSSB_boot[,1][!is.na(checkMonSSB_boot[,1])] 
+X2<-checkMonSSB_boot[,2][!is.na(checkMonSSB_boot[,2])] 
+X4<-checkMonSSB_boot[,4][!is.na(checkMonSSB_boot[,4])] 
+X10<-checkMonSSB_boot[,10][!is.na(checkMonSSB_boot[,10])] 
+X11<-checkMonSSB_boot[,11][!is.na(checkMonSSB_boot[,11])] 
+X11
+# Values of the model coefficients
+Betas <- standardizedSolution(checkMonSSB)[,"est.std"]
+Betas[11]
+#Get the p-values for coefficient
+P_val1 <-mean( abs(X - mean(X, na.rm = T) )> abs( Betas[1]))
+P_val2 <-mean( abs(X2 - mean(X2, na.rm = T) )> abs( Betas[2]))
+P_val4 <-mean( abs(X4 - mean(X4, na.rm = T) )> abs( Betas[4]))
+P_val10 <-mean( abs(X10 - mean(X10, na.rm = T) )> abs( Betas[10]))
+P_val11 <-mean( abs(X11 - mean(X11, na.rm = T) )> abs( Betas[11]))
+SSBmonP<-c(P_val1, P_val2, P_val4, P_val10, P_val11)
+SSBmonP
+#and some parametric bootstrap confidence intervals (2.5%, 97.5%) 
+ConfInt1 <- quantile(X, c(.025, 0.975), na.rm = TRUE)
+ConfInt2 <- quantile(X2, c(.025, 0.975), na.rm = TRUE)
+ConfInt4 <- quantile(X4, c(.025, 0.975), na.rm = TRUE)
+ConfInt10 <- quantile(X10, c(.025, 0.975), na.rm = TRUE)
+ConfInt11 <- quantile(X11, c(.025, 0.975), na.rm = TRUE)
+SSBmonCI<-c(ConfInt1, ConfInt2, ConfInt4, ConfInt10, ConfInt11)
+SSBmonCI
+```
+
+
+Indulgent parenting mediates the relationship between parental sex and SSB intake
+
 ## Summary
-Availability doesn't mediate the relationship between parental sex and FV intake at iEO
 Monitoring mediates the relationship between parental sex and FV intake at iEO
 Monitoring mediates the relationship between parental sex and SSB intake at iEO
 
@@ -706,7 +750,6 @@ Food insecurity does not interact with parent sex to influence availability
 
 ```{r}
 load(file = "/Users/gracer/Library/CloudStorage/OneDrive-UniversityofWyoming/0. Lab/M2AENAD Lab - Documents/RESEARCH/multi-state/gender_paper/gender_analysis.RData")
-
 ```
 
 
