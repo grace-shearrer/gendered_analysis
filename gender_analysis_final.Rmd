@@ -28,7 +28,8 @@ library(modelsummary)
 
 library(boot)
 source("~/Downloads/x.boot.r")  
-
+library(emmeans)
+library(rempsyc)
 ```
 # Why
 The previous notebook I tried to normalize the data. When I normalized the data the log function actually made everything worse. I am trying to fit the non-normal data this time. 
@@ -151,10 +152,6 @@ mJUNK <-'JUNK_freq ~ INDULGENCE + EXPECATION + AVAILABILE + MONITORING + AUTONOM
 mSWEET <-'SWEET_freq ~ INDULGENCE + EXPECATION + AVAILABILE + MONITORING + AUTONOMY + MODELING + Q6_11  + Race + Sex + Education + Food.security + iEO'
 ```
 
-## Confirmatory factor analysis 
-```{r}
-fit_FV <- cfa(m1, data = scaled_data)
-```
 ## Refactor levels of race
 ```{r}
 scaled_data$Race <- factor(scaled_data$Race, levels = c("Non-Hispanic White","Non-Hispanic Black", "Asian", "Hispanic", "Other races"))
@@ -409,8 +406,303 @@ modelsummary(
 ```
 
 
-12/7/23
+# 12/7/23
+Found an issue with the model. It doesn't seem possible that sex is a mediator given that food parenting practices doesn't cause the person's sex. So two things:
+1. Make sex the IV and food parenting practices the DV
+2. Make sex the moderator of food parenting practices
 
+## Return to the basic models
+### Is there a difference in food intake by parent sex?
+```{r}
+t.test(FV_freq ~ Q6_11, data = scaled_data)
+t.test(SSB_freq ~ Q6_11, data = scaled_data)
+t.test(JUNK_freq ~ Q6_11, data = scaled_data) # no difference
+t.test(SWEET_freq ~ Q6_11, data = scaled_data) # no difference
+```
+```{r}
+modelsT <- list(
+  "Difference in parent sex: Fruits and Vegetables"     = t.test(FV_freq ~ Q6_11, data = scaled_data),
+  "Difference in parent sex: SSB"     = t.test(SSB_freq ~ Q6_11, data = scaled_data),
+  "Difference in parent sex: Junk Foods"     = t.test(JUNK_freq ~ Q6_11, data = scaled_data),
+  "Difference in parent sex: Sugary foods"     = t.test(SWEET_freq ~ Q6_11, data = scaled_data)
+)
+
+
+```
+
+```{r}
+pFV <- ggplot(scaled_data, aes(factor(Q6_11), Fruits.vegetables)) + 
+  geom_violin() + 
+  stat_summary(fun = "mean",
+               geom = "crossbar", 
+               width = 0.5,
+               colour = "red") + 
+  scale_x_discrete(breaks=c("1", "2"),
+                      labels=c("Male", "Female")) +
+  labs(title="Fruit and vegetable intakeby parent sex",
+        x ="Parent Sex", y = "Frequency of fruit and vegetable intake")
+
+pSSB <- ggplot(scaled_data, aes(factor(Q6_11), SSB)) + 
+  geom_violin() + 
+  stat_summary(fun = "mean",
+               geom = "crossbar", 
+               width = 0.5,
+               colour = "red") + 
+  scale_x_discrete(breaks=c("1", "2"),
+                      labels=c("Male", "Female")) +
+  labs(title="SSB intakeby parent sex",
+        x ="Parent Sex", y = "Frequency of SSB intake")
+```
+# Display
+```{r}
+modelsummary(
+  modelsT,
+  fmt = 1,
+  estimate  = "{estimate} [{conf.low}, {conf.high}] {stars}",
+  statistic = NULL,
+  coef_omit = "Intercept",
+  coef_rename = c("Q6_11" = "parent sex"))
+grid.arrange(pFV, pSSB, nrow = 1)
+```
+## Summary
+Parental sex is weakly related to SSB and FV consumption.
+
+## Basic model
+food security, parent education, child sex, race/ethnicity, independent eating occasions (from covar analysis)
+```{r}
+mFV <-'FV_freq ~ INDULGENCE + EXPECATION + AVAILABILE + MONITORING + AUTONOMY + MODELING + Q6_11  + Race + Sex + Education + Food.security + iEO + Marital.status'
+mSSB <-'SSB_freq ~ INDULGENCE + EXPECATION + AVAILABILE + MONITORING + AUTONOMY + MODELING + Q6_11  + Race + Sex + Education + Food.security + iEO + Marital.status'
+mJUNK <-'JUNK_freq ~ INDULGENCE + EXPECATION + AVAILABILE + MONITORING + AUTONOMY + MODELING + Q6_11  + Race + Sex + Education + Food.security + iEO + Marital.status'
+mSWEET <-'SWEET_freq ~ INDULGENCE + EXPECATION + AVAILABILE + MONITORING + AUTONOMY + MODELING + Q6_11  + Race + Sex + Education + Food.security + iEO + Marital.status'
+```
+
+```{r}
+models <- list(
+  "Fruits and Vegetables"     = lm(mFV, data = scaled_data),
+  "SSB"                       = lm(mSSB, data = scaled_data),
+  "Junk Foods"                = lm(mJUNK, data = scaled_data),
+  "Sugary foods"              = lm(mSWEET, data = scaled_data)
+)
+
+modelsummary(
+  models,
+  fmt = 1,
+  estimate  = "{estimate} [{conf.low}, {conf.high}] {stars}",
+  statistic = NULL,
+  coef_omit = "Intercept",
+  coef_rename = c("Q6_11" = "parent sex", "RaceHispanic" = "Hispanic", "RaceNon-Hispanic Black" = "Non-Hispanic Black","RaceNon-Hispanic White" = "Non-Hispanic White", "SexGirl" = "Child girl", "RaceAsian" = "Asian", "RaceOther races" = "Other races", "Food.securityFood secure" = "Food secure", "Marital.status" = "Marital status"))
+```
+
+## Monitoring and availability are related to food intake controlling for all other parental variables, sex, child sex,education, food secuirty, education
+
+## Mediation
+Does indulgence or monitoring mediate consumption of SSB or FV?
+```{r}
+parent <- "INDULGENCE"
+food <- "SSB_freq"
+```
+
+
+```{r}
+modelr <- function(parent,food){
+  sprintf("
+         # mediator, a path the effect of sex on food parenting
+         %s ~ a*Q6_11
+
+         # b path, the effect of parenting on food intake
+         %s ~ b*%s+iEO
+
+         # direct effect, the effect of sex on food intake
+         Q6_11 ~ cp * %s+iEO
+
+         # indirect 
+         ab := a*b
+         
+         # Total effects
+         total := cp + (a*b)
+        ",parent, food, parent, food)
+}
+```
+
+```{r}
+check <-sem(modelr(parent,food), data = scaled_data, estimator = "MLM")
+summary(check)
+```
+
+```{r}
+SSBindBoot <- x.boot(check, R = 10)
+med_INDULGENCE_boot <- x.boot(check, R = 10, verbose = TRUE)
+
+```
+
+## Summary
+Availability doesn't mediate the relationship between parental sex and FV intake at iEO
+Monitoring mediates the relationship between parental sex and FV intake at iEO
+Monitoring mediates the relationship between parental sex and SSB intake at iEO
+
+```{r}
+mFVMON <-'FV_freq ~  MONITORING*as.factor(Q6_11)  + Race + Sex + Education + Food.security + iEO'
+mSSBMON <-'SSB_freq ~ MONITORING*as.factor(Q6_11)  + Race + Sex + Education + Food.security + iEO'
+
+mFVAVAIL <-'FV_freq ~  AVAILABILE*as.factor(Q6_11)  + Race + Sex + Education + Food.security + iEO'
+mSSBAVAIL <-'SSB_freq ~ AVAILABILE*as.factor(Q6_11) + Race + Sex + Education + Food.security + iEO'
+
+modelsLinear <- list(
+  "Fruits and Vegetables monitoring"     = lm(mFVMON, data = scaled_data),
+  "SSB monitoring"     = lm(mSSBMON, data = scaled_data),
+  "Fruits and Vegetables availability"     = lm(mFVAVAIL, data = scaled_data),
+  "SSB availability"     = lm(mSSBAVAIL, data = scaled_data)
+)
+
+modelsummary(
+  modelsLinear,
+  fmt = 1,
+  estimate  = "{estimate} [{conf.low}, {conf.high}] {stars}",
+  statistic = NULL,
+  coef_omit = "Intercept",
+  coef_rename = c("Q6_11" = "parent sex", "RaceHispanic" = "Hispanic", "RaceNon-Hispanic Black" = "Non-Hispanic Black","RaceNon-Hispanic White" = "Non-Hispanic White", "SexGirl" = "Child girl", "RaceAsian" = "Asian", "RaceOther races" = "Other races"))
+```
+# Summary of interactions
+Monitoring interacts with parent gender for SSB
+Availability interacts with gender for both FV and SSB
+
+# Explore interactions
+```{r}
+SSBavail.lm <-lm(SSB_freq ~ AVAILABILE*as.factor(Q6_11) + Race + Sex + Education + Food.security + iEO, data = scaled_data)
+
+FVavail.lm <-lm(FV_freq ~ AVAILABILE*as.factor(Q6_11) + Race + Sex + Education + Food.security + iEO, data = scaled_data)
+
+SSBmon.lm <-lm(SSB ~ MONITORING*as.factor(Q6_11) + Race + Sex + Education + Food.security + iEO, data = scaled_data)
+summary(SSBmon.lm)
+emtrends(SSBmon.lm, pairwise ~ as.factor(Q6_11), var = "MONITORING")
+emtrends(FVavail.lm, pairwise ~ as.factor(Q6_11), var = "AVAILABILE")
+emtrends(SSBavail.lm, pairwise ~ as.factor(Q6_11), var = "AVAILABILE")
+
+emmip(SSBmon.lm, as.factor(Q6_11) ~ MONITORING, cov.reduce = range)
+emmip(SSBavail.lm, as.factor(Q6_11) ~ AVAILABILE, cov.reduce = range)
+emmip(FVavail.lm, as.factor(Q6_11) ~ AVAILABILE, cov.reduce = range)
+```
+# Second check
+```{r}
+pkgs <- c("effectsize", "flextable", "interactions")
+install_if_not_installed(pkgs)
+```
+SSB_freq ~ AVAILABILE*as.factor(Q6_11) + Race + Sex + Education + Food.security + iEO,
+```{r}
+moderations <- nice_mod(
+  data = scaled_data,
+  response = "SSB",
+  predictor = "MONITORING",
+  moderator = "Q6_11"
+)
+(my_table <- nice_table(moderations, highlight = TRUE))
+```
+# Post hoc analysis of food security
+```{r}
+test.lm <-lm(SSB_freq ~ Food.security*AVAILABILE*as.factor(Q6_11) + Race + Sex + Education +  iEO, data = scaled_data)
+summary(test.lm)
+
+test2.lm <-lm(FV_freq ~ Food.security*AVAILABILE*as.factor(Q6_11) + Race + Sex + Education +  iEO, data = scaled_data)
+summary(test2.lm)
+scaled_data$Education
+
+summary(as.factor(scaled_data$Food.security))
+as.numeric(as.character(scaled_data$Food.security))
+as.numeric(levels(scaled_data$Food.security))[scaled_data$Food.security]
+levels(scaled_data$Food.security)
+scaled_data$Food.security<-as.factor(scaled_data$Food.security)
+
+scaled_data$Food.security.int<-as.integer(scaled_data$Food.security)
+
+nice_mod(
+  data = scaled_data,
+  response = "SSB_freq",
+  predictor = "AVAILABILE",
+  moderator = "Q6_11",
+  moderator2 = "Food.security.int",
+  covariates = c("Education", "iEO")
+) |>
+  nice_table(highlight = TRUE)
+
+```
+
+# Post hoc analysis marital status
+## Monitoring
+```{r}
+ms.lm<-lm(MONITORING ~ as.factor(Q6_11)*as.factor(Marital.status), data = scaled_data)
+summary(ms.lm)
+
+t.test(MONITORING ~ Q6_11, data = scaled_data) # different between parent sex
+t.test(MONITORING ~ Q6_11, data = subset(scaled_data, scaled_data$Marital.status == 1)) #not different between parent sex
+t.test(MONITORING ~ Q6_11, data = subset(scaled_data, scaled_data$Marital.status == 2)) #different between parent sex
+
+maritalModels <- list(
+  "Differences in monitoring by parent sex overall"     = t.test(MONITORING ~ Q6_11, data = scaled_data),
+  "Differences in monitoring by parent sex when the parent is married"     = t.test(MONITORING ~ Q6_11, data = subset(scaled_data, scaled_data$Marital.status == 1)),
+  "Differences in monitoring by parent sex when the parent is NOT married"     = t.test(MONITORING ~ Q6_11, data = subset(scaled_data, scaled_data$Marital.status == 2))
+)
+
+modelsummary(
+  maritalModels,
+  fmt = 1,
+  estimate  = "{estimate} [{conf.low}, {conf.high}] {stars}",
+  statistic = NULL,
+  coef_omit = "Intercept",
+  coef_rename = c("Q6_11" = "parent sex", "RaceHispanic" = "Hispanic", "RaceNon-Hispanic Black" = "Non-Hispanic Black","RaceNon-Hispanic White" = "Non-Hispanic White", "SexGirl" = "Child girl", "RaceAsian" = "Asian", "RaceOther races" = "Other races"))
+```
+
+Monitoring is different between parental sex when the parent is married, with the male parenting showing higher level of monitoring
+However, when parent is single there is no difference in monitoring.
+## Availability
+```{r}
+ms.lm<-lm(AVAILABILE ~ as.factor(Q6_11)*as.factor(Marital.status), data = scaled_data)
+summary(ms.lm)
+
+t.test(AVAILABILE ~ Q6_11, data = scaled_data) # different between parent sex
+t.test(AVAILABILE ~ Q6_11, data = subset(scaled_data, scaled_data$Marital.status == 1)) #not different between parent sex
+t.test(AVAILABILE ~ Q6_11, data = subset(scaled_data, scaled_data$Marital.status == 2)) #different between parent sex
+
+maritalModels2 <- list(
+  "Differences in AVAILABILE by parent sex overall"     = t.test(AVAILABILE ~ Q6_11, data = scaled_data),
+  "Differences in AVAILABILE by parent sex when the parent is married"     = t.test(AVAILABILE ~ Q6_11, data = subset(scaled_data, scaled_data$Marital.status == 1)),
+  "Differences in AVAILABILE by parent sex when the parent is NOT married"     = t.test(AVAILABILE ~ Q6_11, data = subset(scaled_data, scaled_data$Marital.status == 2))
+)
+
+modelsummary(
+  maritalModels2,
+  fmt = 1,
+  estimate  = "{estimate} [{conf.low}, {conf.high}] {stars}",
+  statistic = NULL,
+  coef_omit = "Intercept",
+  coef_rename = c("Q6_11" = "parent sex", "RaceHispanic" = "Hispanic", "RaceNon-Hispanic Black" = "Non-Hispanic Black","RaceNon-Hispanic White" = "Non-Hispanic White", "SexGirl" = "Child girl", "RaceAsian" = "Asian", "RaceOther races" = "Other races"))
+```
+No differences in availability between parental sex and it does not interact with marital status
+
+# Food security
+## Availability
+```{r}
+ms.lm<-lm(AVAILABILE ~ as.factor(Q6_11)*as.factor(Food.security), data = scaled_data)
+summary(ms.lm)
+
+t.test(AVAILABILE ~ Q6_11, data = scaled_data) # different between parent sex
+t.test(AVAILABILE ~ Q6_11, data = subset(scaled_data, scaled_data$Food.security == "Food insecure")) 
+t.test(AVAILABILE ~ Q6_11, data = subset(scaled_data, scaled_data$Food.security == "Food secure")) 
+
+securityModels2 <- list(
+  "Differences in AVAILABILE by parent sex overall"     = t.test(AVAILABILE ~ Q6_11, data = scaled_data),
+  "Differences in AVAILABILE by parent sex when the parent is food insecure"     = t.test(AVAILABILE ~ Q6_11, data = subset(scaled_data, scaled_data$Food.security == "Food insecure")),
+  "Differences in AVAILABILE by parent sex when the parent is secure"     = t.test(AVAILABILE ~ Q6_11, data = subset(scaled_data, scaled_data$Food.security == "Food secure"))
+)
+
+modelsummary(
+  securityModels2,
+  fmt = 1,
+  estimate  = "{estimate} [{conf.low}, {conf.high}] {stars}",
+  statistic = NULL,
+  coef_omit = "Intercept",
+  coef_rename = c("Q6_11" = "parent sex", "RaceHispanic" = "Hispanic", "RaceNon-Hispanic Black" = "Non-Hispanic Black","RaceNon-Hispanic White" = "Non-Hispanic White", "SexGirl" = "Child girl", "RaceAsian" = "Asian", "RaceOther races" = "Other races"))
+```
+Food insecurity does not interact with parent sex to influence availability
 
 ```{r}
 load(file = "/Users/gracer/Library/CloudStorage/OneDrive-UniversityofWyoming/0. Lab/M2AENAD Lab - Documents/RESEARCH/multi-state/gender_paper/gender_analysis.RData")
