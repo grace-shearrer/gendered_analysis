@@ -448,6 +448,29 @@ pSSB <- ggplot(scaled_data, aes(factor(Q6_11), SSB)) +
                       labels=c("Male", "Female")) +
   labs(title="SSB intakeby parent sex",
         x ="Parent Sex", y = "Frequency of SSB intake")
+
+pIND <- ggplot(scaled_data, aes(factor(Q6_11), Indulgence)) + 
+  geom_violin() + 
+  stat_summary(fun = "mean",
+               geom = "crossbar", 
+               width = 0.5,
+               colour = "red") + 
+  scale_x_discrete(breaks=c("1", "2"),
+                      labels=c("Male", "Female")) +
+  labs(title="Indulgent parenting by parent sex",
+        x ="Parent Sex", y = "Indulgent parenting")
+
+pMON <- ggplot(scaled_data, aes(factor(Q6_11), Monitoring)) + 
+  geom_violin() + 
+  stat_summary(fun = "mean",
+               geom = "crossbar", 
+               width = 0.5,
+               colour = "red") + 
+  scale_x_discrete(breaks=c("1", "2"),
+                      labels=c("Male", "Female")) +
+  labs(title="Parental monitoring by parent sex",
+        x ="Parent Sex", y = "Monitoring")
+
 ```
 # Display
 ```{r}
@@ -458,7 +481,7 @@ modelsummary(
   statistic = NULL,
   coef_omit = "Intercept",
   coef_rename = c("Q6_11" = "parent sex"))
-grid.arrange(pFV, pSSB, nrow = 1)
+grid.arrange(pFV, pSSB,pIND, pMON, nrow = 2)
 ```
 ## Summary
 Parental sex is weakly related to SSB and FV consumption.
@@ -491,7 +514,7 @@ modelsummary(
 
 ## Monitoring and availability are related to food intake controlling for all other parental variables, sex, child sex,education, food secuirty, education
 
-## Mediation
+# Mediation
 Does indulgence or monitoring mediate consumption of SSB or FV?
 ```{r}
 parent <- "MONITORING"
@@ -530,10 +553,6 @@ checkIndFV <-sem(modelr("INDULGENCE","FV_freq"), data = scaled_data, estimator =
 
 
 ```{r}
-standardizedSolution(checkMonSSB)
-```
-
-```{r}
  fct <- function(fit) {
     lavaan::standardizedSolution(fit)[, "est.std"]
   }
@@ -548,6 +567,7 @@ checkIndFV_boot <- bootstrapLavaan(checkIndFV, R = 5000, FUN = fct, iseed = 8970
 
 ## The p values of the important parts
 1, 2, 4, 10, 11
+### Monitoring SSB
 ```{r}
 # The mon SSB failed to converge once and now has an NA, need to remove
 X<-checkMonSSB_boot[,1][!is.na(checkMonSSB_boot[,1])] 
@@ -577,25 +597,109 @@ SSBmonCI<-c(ConfInt1, ConfInt2, ConfInt4, ConfInt10, ConfInt11)
 SSBmonCI
 ```
 
+### Monitoring FV
+```{r}
+X<-checkMonFV_boot[,1][!is.na(checkMonFV_boot[,1])] 
+X2<-checkMonFV_boot[,2][!is.na(checkMonFV_boot[,2])] 
+X4<-checkMonFV_boot[,4][!is.na(checkMonFV_boot[,4])] 
+X10<-checkMonFV_boot[,10][!is.na(checkMonFV_boot[,10])] 
+X11<-checkMonFV_boot[,11][!is.na(checkMonFV_boot[,11])] 
 
-Indulgent parenting mediates the relationship between parental sex and SSB intake
+# Values of the model coefficients
+Betas <- standardizedSolution(checkMonFV)[,"est.std"]
+Betas[11]
+#Get the p-values for coefficient
+P_val1 <-mean( abs(X - mean(X, na.rm = T) )> abs( Betas[1]))
+P_val2 <-mean( abs(X2 - mean(X2, na.rm = T) )> abs( Betas[2]))
+P_val4 <-mean( abs(X4 - mean(X4, na.rm = T) )> abs( Betas[4]))
+P_val10 <-mean( abs(X10 - mean(X10, na.rm = T) )> abs( Betas[10]))
+P_val11 <-mean( abs(X11 - mean(X11, na.rm = T) )> abs( Betas[11]))
+FVmonP<-c(P_val1, P_val2, P_val4, P_val10, P_val11)
 
+#and some parametric bootstrap confidence intervals (2.5%, 97.5%) 
+ConfInt1 <- quantile(X, c(.025, 0.975), na.rm = TRUE)
+ConfInt2 <- quantile(X2, c(.025, 0.975), na.rm = TRUE)
+ConfInt4 <- quantile(X4, c(.025, 0.975), na.rm = TRUE)
+ConfInt10 <- quantile(X10, c(.025, 0.975), na.rm = TRUE)
+ConfInt11 <- quantile(X11, c(.025, 0.975), na.rm = TRUE)
+FVmonCI<-c(ConfInt1, ConfInt2, ConfInt4, ConfInt10, ConfInt11)
+```
+### Indugence FV
+```{r}
+X<-checkIndFV_boot[,1][!is.na(checkIndFV_boot[,1])] 
+X2<-checkIndFV_boot[,2][!is.na(checkIndFV_boot[,2])] 
+X4<-checkIndFV_boot[,4][!is.na(checkIndFV_boot[,4])] 
+X10<-checkIndFV_boot[,10][!is.na(checkIndFV_boot[,10])] 
+X11<-checkIndFV_boot[,11][!is.na(checkIndFV_boot[,11])] 
+
+# Values of the model coefficients
+Betas <- standardizedSolution(checkIndFV)[,"est.std"]
+Betas[11]
+#Get the p-values for coefficient
+P_val1 <-mean( abs(X - mean(X, na.rm = T) )> abs( Betas[1]))
+P_val2 <-mean( abs(X2 - mean(X2, na.rm = T) )> abs( Betas[2]))
+P_val4 <-mean( abs(X4 - mean(X4, na.rm = T) )> abs( Betas[4]))
+P_val10 <-mean( abs(X10 - mean(X10, na.rm = T) )> abs( Betas[10]))
+P_val11 <-mean( abs(X11 - mean(X11, na.rm = T) )> abs( Betas[11]))
+FVIndP<-c(P_val1, P_val2, P_val4, P_val10, P_val11)
+FVIndP
+#and some parametric bootstrap confidence intervals (2.5%, 97.5%) 
+ConfInt1 <- quantile(X, c(.025, 0.975), na.rm = TRUE)
+ConfInt2 <- quantile(X2, c(.025, 0.975), na.rm = TRUE)
+ConfInt4 <- quantile(X4, c(.025, 0.975), na.rm = TRUE)
+ConfInt10 <- quantile(X10, c(.025, 0.975), na.rm = TRUE)
+ConfInt11 <- quantile(X11, c(.025, 0.975), na.rm = TRUE)
+FVIndCI<-c(ConfInt1, ConfInt2, ConfInt4, ConfInt10, ConfInt11)
+FVIndCI
+```
+### Indugence SSB
+```{r}
+# The Ind SSB failed to converge once and now has an NA, need to remove
+X<-checkIndSSB_boot[,1][!is.na(checkIndSSB_boot[,1])] 
+X2<-checkIndSSB_boot[,2][!is.na(checkIndSSB_boot[,2])] 
+X4<-checkIndSSB_boot[,4][!is.na(checkIndSSB_boot[,4])] 
+X10<-checkIndSSB_boot[,10][!is.na(checkIndSSB_boot[,10])] 
+X11<-checkIndSSB_boot[,11][!is.na(checkIndSSB_boot[,11])] 
+
+# Values of the model coefficients
+Betas <- standardizedSolution(checkIndSSB)[,"est.std"]
+
+#Get the p-values for coefficient
+P_val1 <-mean( abs(X - mean(X, na.rm = T) )> abs( Betas[1]))
+P_val2 <-mean( abs(X2 - mean(X2, na.rm = T) )> abs( Betas[2]))
+P_val4 <-mean( abs(X4 - mean(X4, na.rm = T) )> abs( Betas[4]))
+P_val10 <-mean( abs(X10 - mean(X10, na.rm = T) )> abs( Betas[10]))
+P_val11 <-mean( abs(X11 - mean(X11, na.rm = T) )> abs( Betas[11]))
+SSBIndP<-c(P_val1, P_val2, P_val4, P_val10, P_val11)
+SSBIndP
+#and some parametric bootstrap confidence intervals (2.5%, 97.5%) 
+ConfInt1 <- quantile(X, c(.025, 0.975), na.rm = TRUE)
+ConfInt2 <- quantile(X2, c(.025, 0.975), na.rm = TRUE)
+ConfInt4 <- quantile(X4, c(.025, 0.975), na.rm = TRUE)
+ConfInt10 <- quantile(X10, c(.025, 0.975), na.rm = TRUE)
+ConfInt11 <- quantile(X11, c(.025, 0.975), na.rm = TRUE)
+SSBIndCI<-c(ConfInt1, ConfInt2, ConfInt4, ConfInt10, ConfInt11)
+SSBIndCI
+```
 ## Summary
-Monitoring mediates the relationship between parental sex and FV intake at iEO
-Monitoring mediates the relationship between parental sex and SSB intake at iEO
+Indulgent parenting mediates the relationship between parental sex and SSB intake
+Indulgent parenting mediates the relationship between parental sex and FV intake
+Monitoring parenting mediates the relationship between parental sex and SSB intake
+Monitoring parenting mediates the relationship between parental sex and FV intake
 
+# Moderation?
 ```{r}
 mFVMON <-'FV_freq ~  MONITORING*as.factor(Q6_11)  + Race + Sex + Education + Food.security + iEO'
 mSSBMON <-'SSB_freq ~ MONITORING*as.factor(Q6_11)  + Race + Sex + Education + Food.security + iEO'
 
-mFVAVAIL <-'FV_freq ~  AVAILABILE*as.factor(Q6_11)  + Race + Sex + Education + Food.security + iEO'
-mSSBAVAIL <-'SSB_freq ~ AVAILABILE*as.factor(Q6_11) + Race + Sex + Education + Food.security + iEO'
+mFVInd <-'FV_freq ~  INDULGENCE*as.factor(Q6_11)  + Race + Sex + Education + Food.security + iEO'
+mSSBInd <-'SSB_freq ~ INDULGENCE*as.factor(Q6_11) + Race + Sex + Education + Food.security + iEO'
 
 modelsLinear <- list(
   "Fruits and Vegetables monitoring"     = lm(mFVMON, data = scaled_data),
   "SSB monitoring"     = lm(mSSBMON, data = scaled_data),
-  "Fruits and Vegetables availability"     = lm(mFVAVAIL, data = scaled_data),
-  "SSB availability"     = lm(mSSBAVAIL, data = scaled_data)
+  "Fruits and Vegetables indulgence"     = lm(mFVInd, data = scaled_data),
+  "SSB indulgence"     = lm(mSSBInd, data = scaled_data)
 )
 
 modelsummary(
