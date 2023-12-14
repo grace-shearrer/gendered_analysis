@@ -579,291 +579,194 @@ checkAutFV_boot <- bootstrapLavaan(checkAutFV, R = 5000, FUN = fct, iseed = 8970
 ```
 
 ## The p values of the important parts
-1, 2, 4, 10, 11
+1, 11, 22, 91, 92
+
+
 ### Monitoring SSB
 ```{r}
-# The mon SSB failed to converge once and now has an NA, need to remove
-X<-checkMonSSB_boot[,1][!is.na(checkMonSSB_boot[,1])] 
-X2<-checkMonSSB_boot[,2][!is.na(checkMonSSB_boot[,2])] 
-X4<-checkMonSSB_boot[,4][!is.na(checkMonSSB_boot[,4])] 
-X10<-checkMonSSB_boot[,10][!is.na(checkMonSSB_boot[,10])] 
-X11<-checkMonSSB_boot[,11][!is.na(checkMonSSB_boot[,11])] 
-X11
+a<-checkMonSSB_boot[,1][!is.na(checkMonSSB_boot[,1])] 
+b<-checkMonSSB_boot[,11][!is.na(checkMonSSB_boot[,11])] 
+cp<-checkMonSSB_boot[,22][!is.na(checkMonSSB_boot[,22])] 
+indirect<-checkMonSSB_boot[,91][!is.na(checkMonSSB_boot[,92])] 
+Total<-checkMonSSB_boot[,11][!is.na(checkMonSSB_boot[,11])] 
+
 # Values of the model coefficients
 Betas <- standardizedSolution(checkMonSSB)[,"est.std"]
-Betas[11]
+
 #Get the p-values for coefficient
-P_val1 <-mean( abs(X - mean(X, na.rm = T) )> abs( Betas[1]))
-P_val2 <-mean( abs(X2 - mean(X2, na.rm = T) )> abs( Betas[2]))
-P_val4 <-mean( abs(X4 - mean(X4, na.rm = T) )> abs( Betas[4]))
-P_val10 <-mean( abs(X10 - mean(X10, na.rm = T) )> abs( Betas[10]))
-P_val11 <-mean( abs(X11 - mean(X11, na.rm = T) )> abs( Betas[11]))
-SSBmonP<-c(P_val1, P_val2, P_val4, P_val10, P_val11)
+P_vala <-mean( abs(a - mean(a, na.rm = T) )> abs( Betas[1]))
+P_valb <-mean( abs(b - mean(b, na.rm = T) )> abs( Betas[11]))
+P_valcp <-mean( abs(cp - mean(cp, na.rm = T) )> abs( Betas[22]))
+P_valindirect <-mean( abs(indirect - mean(indirect, na.rm = T) )> abs( Betas[91]))
+P_valtotal <-mean( abs(Total - mean(Total, na.rm = T) )> abs( Betas[92]))
+SSBmonP<-c(P_vala, P_valb, P_valcp, P_valindirect, P_valtotal)
 SSBmonP
 #and some parametric bootstrap confidence intervals (2.5%, 97.5%) 
-ConfInt1 <- quantile(X, c(.025, 0.975), na.rm = TRUE)
-ConfInt2 <- quantile(X2, c(.025, 0.975), na.rm = TRUE)
-ConfInt4 <- quantile(X4, c(.025, 0.975), na.rm = TRUE)
-ConfInt10 <- quantile(X10, c(.025, 0.975), na.rm = TRUE)
-ConfInt11 <- quantile(X11, c(.025, 0.975), na.rm = TRUE)
-SSBmonCI<-c(ConfInt1, ConfInt2, ConfInt4, ConfInt10, ConfInt11)
+ConfIntA <- quantile(a, c(.025, 0.975), na.rm = TRUE)
+ConfIntB <- quantile(b, c(.025, 0.975), na.rm = TRUE)
+ConfIntCP <- quantile(cp, c(.025, 0.975), na.rm = TRUE)
+ConfIntIndirect <- quantile(indirect, c(.025, 0.975), na.rm = TRUE)
+ConfIntTotal <- quantile(Total, c(.025, 0.975), na.rm = TRUE)
+SSBmonCI<-c(ConfIntA, ConfIntB, ConfIntCP, ConfIntIndirect, ConfIntTotal)
 SSBmonCI
+standardizedSolution(checkMonSSB)
 ```
 
 ### Monitoring FV
 ```{r}
-X<-checkMonFV_boot[,1][!is.na(checkMonFV_boot[,1])] 
-X2<-checkMonFV_boot[,2][!is.na(checkMonFV_boot[,2])] 
-X4<-checkMonFV_boot[,4][!is.na(checkMonFV_boot[,4])] 
-X10<-checkMonFV_boot[,10][!is.na(checkMonFV_boot[,10])] 
-X11<-checkMonFV_boot[,11][!is.na(checkMonFV_boot[,11])] 
+a<-checkMonFV_boot[,1][!is.na(checkMonFV_boot[,1])] 
+b<-checkMonFV_boot[,11][!is.na(checkMonFV_boot[,11])] 
+cp<-checkMonFV_boot[,22][!is.na(checkMonFV_boot[,22])] 
+indirect<-checkMonFV_boot[,91][!is.na(checkMonFV_boot[,92])] 
+Total<-checkMonFV_boot[,11][!is.na(checkMonFV_boot[,11])] 
 
 # Values of the model coefficients
 Betas <- standardizedSolution(checkMonFV)[,"est.std"]
-Betas[11]
-#Get the p-values for coefficient
-P_val1 <-mean( abs(X - mean(X, na.rm = T) )> abs( Betas[1]))
-P_val2 <-mean( abs(X2 - mean(X2, na.rm = T) )> abs( Betas[2]))
-P_val4 <-mean( abs(X4 - mean(X4, na.rm = T) )> abs( Betas[4]))
-P_val10 <-mean( abs(X10 - mean(X10, na.rm = T) )> abs( Betas[10]))
-P_val11 <-mean( abs(X11 - mean(X11, na.rm = T) )> abs( Betas[11]))
-FVmonP<-c(P_val1, P_val2, P_val4, P_val10, P_val11)
 
+#Get the p-values for coefficient
+P_vala <-mean( abs(a - mean(a, na.rm = T) )> abs( Betas[1]))
+P_valb <-mean( abs(b - mean(b, na.rm = T) )> abs( Betas[11]))
+P_valcp <-mean( abs(cp - mean(cp, na.rm = T) )> abs( Betas[22]))
+P_valindirect <-mean( abs(indirect - mean(indirect, na.rm = T) )> abs( Betas[91]))
+P_valtotal <-mean( abs(Total - mean(Total, na.rm = T) )> abs( Betas[92]))
+FVmonP<-c(P_vala, P_valb, P_valcp, P_valindirect, P_valtotal)
+FVmonP
 #and some parametric bootstrap confidence intervals (2.5%, 97.5%) 
-ConfInt1 <- quantile(X, c(.025, 0.975), na.rm = TRUE)
-ConfInt2 <- quantile(X2, c(.025, 0.975), na.rm = TRUE)
-ConfInt4 <- quantile(X4, c(.025, 0.975), na.rm = TRUE)
-ConfInt10 <- quantile(X10, c(.025, 0.975), na.rm = TRUE)
-ConfInt11 <- quantile(X11, c(.025, 0.975), na.rm = TRUE)
-FVmonCI<-c(ConfInt1, ConfInt2, ConfInt4, ConfInt10, ConfInt11)
+ConfIntA <- quantile(a, c(.025, 0.975), na.rm = TRUE)
+ConfIntB <- quantile(b, c(.025, 0.975), na.rm = TRUE)
+ConfIntCP <- quantile(cp, c(.025, 0.975), na.rm = TRUE)
+ConfIntIndirect <- quantile(indirect, c(.025, 0.975), na.rm = TRUE)
+ConfIntTotal <- quantile(Total, c(.025, 0.975), na.rm = TRUE)
+FVmonCI<-c(ConfIntA, ConfIntB, ConfIntCP, ConfIntIndirect, ConfIntTotal)
+FVmonCI
+standardizedSolution(checkMonFV)
 ```
 ### Indugence FV
 ```{r}
-X<-checkIndFV_boot[,1][!is.na(checkIndFV_boot[,1])] 
-X2<-checkIndFV_boot[,2][!is.na(checkIndFV_boot[,2])] 
-X4<-checkIndFV_boot[,4][!is.na(checkIndFV_boot[,4])] 
-X10<-checkIndFV_boot[,10][!is.na(checkIndFV_boot[,10])] 
-X11<-checkIndFV_boot[,11][!is.na(checkIndFV_boot[,11])] 
+a<-checkIndFV_boot[,1][!is.na(checkIndFV_boot[,1])] 
+b<-checkIndFV_boot[,11][!is.na(checkIndFV_boot[,11])] 
+cp<-checkIndFV_boot[,22][!is.na(checkIndFV_boot[,22])] 
+indirect<-checkIndFV_boot[,91][!is.na(checkIndFV_boot[,92])] 
+Total<-checkIndFV_boot[,11][!is.na(checkIndFV_boot[,11])] 
 
 # Values of the model coefficients
 Betas <- standardizedSolution(checkIndFV)[,"est.std"]
-Betas[11]
+
 #Get the p-values for coefficient
-P_val1 <-mean( abs(X - mean(X, na.rm = T) )> abs( Betas[1]))
-P_val2 <-mean( abs(X2 - mean(X2, na.rm = T) )> abs( Betas[2]))
-P_val4 <-mean( abs(X4 - mean(X4, na.rm = T) )> abs( Betas[4]))
-P_val10 <-mean( abs(X10 - mean(X10, na.rm = T) )> abs( Betas[10]))
-P_val11 <-mean( abs(X11 - mean(X11, na.rm = T) )> abs( Betas[11]))
-FVIndP<-c(P_val1, P_val2, P_val4, P_val10, P_val11)
+P_vala <-mean( abs(a - mean(a, na.rm = T) )> abs( Betas[1]))
+P_valb <-mean( abs(b - mean(b, na.rm = T) )> abs( Betas[11]))
+P_valcp <-mean( abs(cp - mean(cp, na.rm = T) )> abs( Betas[22]))
+P_valindirect <-mean( abs(indirect - mean(indirect, na.rm = T) )> abs( Betas[91]))
+P_valtotal <-mean( abs(Total - mean(Total, na.rm = T) )> abs( Betas[92]))
+FVIndP<-c(P_vala, P_valb, P_valcp, P_valindirect, P_valtotal)
 FVIndP
 #and some parametric bootstrap confidence intervals (2.5%, 97.5%) 
-ConfInt1 <- quantile(X, c(.025, 0.975), na.rm = TRUE)
-ConfInt2 <- quantile(X2, c(.025, 0.975), na.rm = TRUE)
-ConfInt4 <- quantile(X4, c(.025, 0.975), na.rm = TRUE)
-ConfInt10 <- quantile(X10, c(.025, 0.975), na.rm = TRUE)
-ConfInt11 <- quantile(X11, c(.025, 0.975), na.rm = TRUE)
-FVIndCI<-c(ConfInt1, ConfInt2, ConfInt4, ConfInt10, ConfInt11)
+ConfIntA <- quantile(a, c(.025, 0.975), na.rm = TRUE)
+ConfIntB <- quantile(b, c(.025, 0.975), na.rm = TRUE)
+ConfIntCP <- quantile(cp, c(.025, 0.975), na.rm = TRUE)
+ConfIntIndirect <- quantile(indirect, c(.025, 0.975), na.rm = TRUE)
+ConfIntTotal <- quantile(Total, c(.025, 0.975), na.rm = TRUE)
+FVIndCI<-c(ConfIntA, ConfIntB, ConfIntCP, ConfIntIndirect, ConfIntTotal)
 FVIndCI
+standardizedSolution(checkIndFV)
 ```
 ### Indugence SSB
 ```{r}
-# The Ind SSB failed to converge once and now has an NA, need to remove
-X<-checkIndSSB_boot[,1][!is.na(checkIndSSB_boot[,1])] 
-X2<-checkIndSSB_boot[,2][!is.na(checkIndSSB_boot[,2])] 
-X4<-checkIndSSB_boot[,4][!is.na(checkIndSSB_boot[,4])] 
-X10<-checkIndSSB_boot[,10][!is.na(checkIndSSB_boot[,10])] 
-X11<-checkIndSSB_boot[,11][!is.na(checkIndSSB_boot[,11])] 
+a<-checkIndSSB_boot[,1][!is.na(checkIndSSB_boot[,1])] 
+b<-checkIndSSB_boot[,11][!is.na(checkIndSSB_boot[,11])] 
+cp<-checkIndSSB_boot[,22][!is.na(checkIndSSB_boot[,22])] 
+indirect<-checkIndSSB_boot[,91][!is.na(checkIndSSB_boot[,92])] 
+Total<-checkIndSSB_boot[,11][!is.na(checkIndSSB_boot[,11])] 
 
 # Values of the model coefficients
 Betas <- standardizedSolution(checkIndSSB)[,"est.std"]
 
 #Get the p-values for coefficient
-P_val1 <-mean( abs(X - mean(X, na.rm = T) )> abs( Betas[1]))
-P_val2 <-mean( abs(X2 - mean(X2, na.rm = T) )> abs( Betas[2]))
-P_val4 <-mean( abs(X4 - mean(X4, na.rm = T) )> abs( Betas[4]))
-P_val10 <-mean( abs(X10 - mean(X10, na.rm = T) )> abs( Betas[10]))
-P_val11 <-mean( abs(X11 - mean(X11, na.rm = T) )> abs( Betas[11]))
-SSBIndP<-c(P_val1, P_val2, P_val4, P_val10, P_val11)
+P_vala <-mean( abs(a - mean(a, na.rm = T) )> abs( Betas[1]))
+P_valb <-mean( abs(b - mean(b, na.rm = T) )> abs( Betas[11]))
+P_valcp <-mean( abs(cp - mean(cp, na.rm = T) )> abs( Betas[22]))
+P_valindirect <-mean( abs(indirect - mean(indirect, na.rm = T) )> abs( Betas[91]))
+P_valtotal <-mean( abs(Total - mean(Total, na.rm = T) )> abs( Betas[92]))
+SSBIndP<-c(P_vala, P_valb, P_valcp, P_valindirect, P_valtotal)
 SSBIndP
 #and some parametric bootstrap confidence intervals (2.5%, 97.5%) 
-ConfInt1 <- quantile(X, c(.025, 0.975), na.rm = TRUE)
-ConfInt2 <- quantile(X2, c(.025, 0.975), na.rm = TRUE)
-ConfInt4 <- quantile(X4, c(.025, 0.975), na.rm = TRUE)
-ConfInt10 <- quantile(X10, c(.025, 0.975), na.rm = TRUE)
-ConfInt11 <- quantile(X11, c(.025, 0.975), na.rm = TRUE)
-SSBIndCI<-c(ConfInt1, ConfInt2, ConfInt4, ConfInt10, ConfInt11)
+ConfIntA <- quantile(a, c(.025, 0.975), na.rm = TRUE)
+ConfIntB <- quantile(b, c(.025, 0.975), na.rm = TRUE)
+ConfIntCP <- quantile(cp, c(.025, 0.975), na.rm = TRUE)
+ConfIntIndirect <- quantile(indirect, c(.025, 0.975), na.rm = TRUE)
+ConfIntTotal <- quantile(Total, c(.025, 0.975), na.rm = TRUE)
+SSBIndCI<-c(ConfIntA, ConfIntB, ConfIntCP, ConfIntIndirect, ConfIntTotal)
 SSBIndCI
+standardizedSolution(checkIndSSB)
 ```
+
+### Autonomy SSB
+```{r}
+a<-checkAutSSB_boot[,1][!is.na(checkAutSSB_boot[,1])] 
+b<-checkAutSSB_boot[,11][!is.na(checkAutSSB_boot[,11])] 
+cp<-checkAutSSB_boot[,22][!is.na(checkAutSSB_boot[,22])] 
+Autirect<-checkAutSSB_boot[,91][!is.na(checkAutSSB_boot[,92])] 
+Total<-checkAutSSB_boot[,11][!is.na(checkAutSSB_boot[,11])] 
+
+# Values of the model coefficients
+Betas <- standardizedSolution(checkAutSSB)[,"est.std"]
+
+#Get the p-values for coefficient
+P_vala <-mean( abs(a - mean(a, na.rm = T) )> abs( Betas[1]))
+P_valb <-mean( abs(b - mean(b, na.rm = T) )> abs( Betas[11]))
+P_valcp <-mean( abs(cp - mean(cp, na.rm = T) )> abs( Betas[22]))
+P_valAutirect <-mean( abs(Autirect - mean(Autirect, na.rm = T) )> abs( Betas[91]))
+P_valtotal <-mean( abs(Total - mean(Total, na.rm = T) )> abs( Betas[92]))
+SSBAutP<-c(P_vala, P_valb, P_valcp, P_valAutirect, P_valtotal)
+SSBAutP
+#and some parametric bootstrap confidence intervals (2.5%, 97.5%) 
+ConfIntA <- quantile(a, c(.025, 0.975), na.rm = TRUE)
+ConfIntB <- quantile(b, c(.025, 0.975), na.rm = TRUE)
+ConfIntCP <- quantile(cp, c(.025, 0.975), na.rm = TRUE)
+ConfIntAutirect <- quantile(Autirect, c(.025, 0.975), na.rm = TRUE)
+ConfIntTotal <- quantile(Total, c(.025, 0.975), na.rm = TRUE)
+SSBAutCI<-c(ConfIntA, ConfIntB, ConfIntCP, ConfIntAutirect, ConfIntTotal)
+SSBAutCI
+standardizedSolution(checkAutSSB)
+```
+
+### Autonomy FV
+```{r}
+a<-checkAutFV_boot[,1][!is.na(checkAutFV_boot[,1])] 
+b<-checkAutFV_boot[,11][!is.na(checkAutFV_boot[,11])] 
+cp<-checkAutFV_boot[,22][!is.na(checkAutFV_boot[,22])] 
+Autirect<-checkAutFV_boot[,91][!is.na(checkAutFV_boot[,92])] 
+Total<-checkAutFV_boot[,11][!is.na(checkAutFV_boot[,11])] 
+
+# Values of the model coefficients
+Betas <- standardizedSolution(checkAutFV)[,"est.std"]
+
+#Get the p-values for coefficient
+P_vala <-mean( abs(a - mean(a, na.rm = T) )> abs( Betas[1]))
+P_valb <-mean( abs(b - mean(b, na.rm = T) )> abs( Betas[11]))
+P_valcp <-mean( abs(cp - mean(cp, na.rm = T) )> abs( Betas[22]))
+P_valAutirect <-mean( abs(Autirect - mean(Autirect, na.rm = T) )> abs( Betas[91]))
+P_valtotal <-mean( abs(Total - mean(Total, na.rm = T) )> abs( Betas[92]))
+FVAutP<-c(P_vala, P_valb, P_valcp, P_valAutirect, P_valtotal)
+FVAutP
+#and some parametric bootstrap confidence intervals (2.5%, 97.5%) 
+ConfIntA <- quantile(a, c(.025, 0.975), na.rm = TRUE)
+ConfIntB <- quantile(b, c(.025, 0.975), na.rm = TRUE)
+ConfIntCP <- quantile(cp, c(.025, 0.975), na.rm = TRUE)
+ConfIntAutirect <- quantile(Autirect, c(.025, 0.975), na.rm = TRUE)
+ConfIntTotal <- quantile(Total, c(.025, 0.975), na.rm = TRUE)
+FVAutCI<-c(ConfIntA, ConfIntB, ConfIntCP, ConfIntAutirect, ConfIntTotal)
+FVAutCI
+standardizedSolution(checkAutFV)
+```
+
 ## Summary
 Indulgent parenting mediates the relationship between parental sex and SSB intake
 Indulgent parenting mediates the relationship between parental sex and FV intake
 Monitoring parenting mediates the relationship between parental sex and SSB intake
 Monitoring parenting mediates the relationship between parental sex and FV intake
 
-# Moderation?
-```{r}
-mFVMON <-'FV_freq ~  MONITORING*as.factor(Q6_11)  + Race + Sex + Education + Food.security + iEO'
-mSSBMON <-'SSB_freq ~ MONITORING*as.factor(Q6_11)  + Race + Sex + Education + Food.security + iEO'
 
-mFVInd <-'FV_freq ~  INDULGENCE*as.factor(Q6_11)  + Race + Sex + Education + Food.security + iEO'
-mSSBInd <-'SSB_freq ~ INDULGENCE*as.factor(Q6_11) + Race + Sex + Education + Food.security + iEO'
-
-modelsLinear <- list(
-  "Fruits and Vegetables monitoring"     = lm(mFVMON, data = scaled_data),
-  "SSB monitoring"     = lm(mSSBMON, data = scaled_data),
-  "Fruits and Vegetables indulgence"     = lm(mFVInd, data = scaled_data),
-  "SSB indulgence"     = lm(mSSBInd, data = scaled_data)
-)
-
-modelsummary(
-  modelsLinear,
-  fmt = 1,
-  estimate  = "{estimate} [{conf.low}, {conf.high}] {stars}",
-  statistic = NULL,
-  coef_omit = "Intercept",
-  coef_rename = c("Q6_11" = "parent sex", "RaceHispanic" = "Hispanic", "RaceNon-Hispanic Black" = "Non-Hispanic Black","RaceNon-Hispanic White" = "Non-Hispanic White", "SexGirl" = "Child girl", "RaceAsian" = "Asian", "RaceOther races" = "Other races"))
-```
-# Summary of interactions
-Monitoring interacts with parent gender for SSB
-Availability interacts with gender for both FV and SSB
-
-# Explore interactions
-```{r}
-SSBavail.lm <-lm(SSB_freq ~ AVAILABILE*as.factor(Q6_11) + Race + Sex + Education + Food.security + iEO, data = scaled_data)
-
-FVavail.lm <-lm(FV_freq ~ AVAILABILE*as.factor(Q6_11) + Race + Sex + Education + Food.security + iEO, data = scaled_data)
-
-SSBmon.lm <-lm(SSB ~ MONITORING*as.factor(Q6_11) + Race + Sex + Education + Food.security + iEO, data = scaled_data)
-summary(SSBmon.lm)
-emtrends(SSBmon.lm, pairwise ~ as.factor(Q6_11), var = "MONITORING")
-emtrends(FVavail.lm, pairwise ~ as.factor(Q6_11), var = "AVAILABILE")
-emtrends(SSBavail.lm, pairwise ~ as.factor(Q6_11), var = "AVAILABILE")
-
-emmip(SSBmon.lm, as.factor(Q6_11) ~ MONITORING, cov.reduce = range)
-emmip(SSBavail.lm, as.factor(Q6_11) ~ AVAILABILE, cov.reduce = range)
-emmip(FVavail.lm, as.factor(Q6_11) ~ AVAILABILE, cov.reduce = range)
-```
-# Second check
-```{r}
-pkgs <- c("effectsize", "flextable", "interactions")
-install_if_not_installed(pkgs)
-```
-SSB_freq ~ AVAILABILE*as.factor(Q6_11) + Race + Sex + Education + Food.security + iEO,
-```{r}
-moderations <- nice_mod(
-  data = scaled_data,
-  response = "SSB",
-  predictor = "MONITORING",
-  moderator = "Q6_11"
-)
-(my_table <- nice_table(moderations, highlight = TRUE))
-```
-# Post hoc analysis of food security
-```{r}
-test.lm <-lm(SSB_freq ~ Food.security*AVAILABILE*as.factor(Q6_11) + Race + Sex + Education +  iEO, data = scaled_data)
-summary(test.lm)
-
-test2.lm <-lm(FV_freq ~ Food.security*AVAILABILE*as.factor(Q6_11) + Race + Sex + Education +  iEO, data = scaled_data)
-summary(test2.lm)
-scaled_data$Education
-
-summary(as.factor(scaled_data$Food.security))
-as.numeric(as.character(scaled_data$Food.security))
-as.numeric(levels(scaled_data$Food.security))[scaled_data$Food.security]
-levels(scaled_data$Food.security)
-scaled_data$Food.security<-as.factor(scaled_data$Food.security)
-
-scaled_data$Food.security.int<-as.integer(scaled_data$Food.security)
-
-nice_mod(
-  data = scaled_data,
-  response = "SSB_freq",
-  predictor = "AVAILABILE",
-  moderator = "Q6_11",
-  moderator2 = "Food.security.int",
-  covariates = c("Education", "iEO")
-) |>
-  nice_table(highlight = TRUE)
-
-```
-
-# Post hoc analysis marital status
-## Monitoring
-```{r}
-ms.lm<-lm(MONITORING ~ as.factor(Q6_11)*as.factor(Marital.status), data = scaled_data)
-summary(ms.lm)
-
-t.test(MONITORING ~ Q6_11, data = scaled_data) # different between parent sex
-t.test(MONITORING ~ Q6_11, data = subset(scaled_data, scaled_data$Marital.status == 1)) #not different between parent sex
-t.test(MONITORING ~ Q6_11, data = subset(scaled_data, scaled_data$Marital.status == 2)) #different between parent sex
-
-maritalModels <- list(
-  "Differences in monitoring by parent sex overall"     = t.test(MONITORING ~ Q6_11, data = scaled_data),
-  "Differences in monitoring by parent sex when the parent is married"     = t.test(MONITORING ~ Q6_11, data = subset(scaled_data, scaled_data$Marital.status == 1)),
-  "Differences in monitoring by parent sex when the parent is NOT married"     = t.test(MONITORING ~ Q6_11, data = subset(scaled_data, scaled_data$Marital.status == 2))
-)
-
-modelsummary(
-  maritalModels,
-  fmt = 1,
-  estimate  = "{estimate} [{conf.low}, {conf.high}] {stars}",
-  statistic = NULL,
-  coef_omit = "Intercept",
-  coef_rename = c("Q6_11" = "parent sex", "RaceHispanic" = "Hispanic", "RaceNon-Hispanic Black" = "Non-Hispanic Black","RaceNon-Hispanic White" = "Non-Hispanic White", "SexGirl" = "Child girl", "RaceAsian" = "Asian", "RaceOther races" = "Other races"))
-```
-
-Monitoring is different between parental sex when the parent is married, with the male parenting showing higher level of monitoring
-However, when parent is single there is no difference in monitoring.
-## Availability
-```{r}
-ms.lm<-lm(AVAILABILE ~ as.factor(Q6_11)*as.factor(Marital.status), data = scaled_data)
-summary(ms.lm)
-
-t.test(AVAILABILE ~ Q6_11, data = scaled_data) # different between parent sex
-t.test(AVAILABILE ~ Q6_11, data = subset(scaled_data, scaled_data$Marital.status == 1)) #not different between parent sex
-t.test(AVAILABILE ~ Q6_11, data = subset(scaled_data, scaled_data$Marital.status == 2)) #different between parent sex
-
-maritalModels2 <- list(
-  "Differences in AVAILABILE by parent sex overall"     = t.test(AVAILABILE ~ Q6_11, data = scaled_data),
-  "Differences in AVAILABILE by parent sex when the parent is married"     = t.test(AVAILABILE ~ Q6_11, data = subset(scaled_data, scaled_data$Marital.status == 1)),
-  "Differences in AVAILABILE by parent sex when the parent is NOT married"     = t.test(AVAILABILE ~ Q6_11, data = subset(scaled_data, scaled_data$Marital.status == 2))
-)
-
-modelsummary(
-  maritalModels2,
-  fmt = 1,
-  estimate  = "{estimate} [{conf.low}, {conf.high}] {stars}",
-  statistic = NULL,
-  coef_omit = "Intercept",
-  coef_rename = c("Q6_11" = "parent sex", "RaceHispanic" = "Hispanic", "RaceNon-Hispanic Black" = "Non-Hispanic Black","RaceNon-Hispanic White" = "Non-Hispanic White", "SexGirl" = "Child girl", "RaceAsian" = "Asian", "RaceOther races" = "Other races"))
-```
-No differences in availability between parental sex and it does not interact with marital status
-
-# Food security
-## Availability
-```{r}
-ms.lm<-lm(AVAILABILE ~ as.factor(Q6_11)*as.factor(Food.security), data = scaled_data)
-summary(ms.lm)
-
-t.test(AVAILABILE ~ Q6_11, data = scaled_data) # different between parent sex
-t.test(AVAILABILE ~ Q6_11, data = subset(scaled_data, scaled_data$Food.security == "Food insecure")) 
-t.test(AVAILABILE ~ Q6_11, data = subset(scaled_data, scaled_data$Food.security == "Food secure")) 
-
-securityModels2 <- list(
-  "Differences in AVAILABILE by parent sex overall"     = t.test(AVAILABILE ~ Q6_11, data = scaled_data),
-  "Differences in AVAILABILE by parent sex when the parent is food insecure"     = t.test(AVAILABILE ~ Q6_11, data = subset(scaled_data, scaled_data$Food.security == "Food insecure")),
-  "Differences in AVAILABILE by parent sex when the parent is secure"     = t.test(AVAILABILE ~ Q6_11, data = subset(scaled_data, scaled_data$Food.security == "Food secure"))
-)
-
-modelsummary(
-  securityModels2,
-  fmt = 1,
-  estimate  = "{estimate} [{conf.low}, {conf.high}] {stars}",
-  statistic = NULL,
-  coef_omit = "Intercept",
-  coef_rename = c("Q6_11" = "parent sex", "RaceHispanic" = "Hispanic", "RaceNon-Hispanic Black" = "Non-Hispanic Black","RaceNon-Hispanic White" = "Non-Hispanic White", "SexGirl" = "Child girl", "RaceAsian" = "Asian", "RaceOther races" = "Other races"))
-```
-Food insecurity does not interact with parent sex to influence availability
 
 ```{r}
 load(file = "/Users/gracer/Library/CloudStorage/OneDrive-UniversityofWyoming/0. Lab/M2AENAD Lab - Documents/RESEARCH/multi-state/gender_paper/gender_analysis.RData")
