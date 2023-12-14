@@ -32,7 +32,7 @@ source("~/Downloads/x.boot.r")
 library(emmeans)
 library(rempsyc)
 library(gridExtra)
-
+library(fastDummies)
 ```
 # Why
 The previous notebook I tried to normalize the data. When I normalized the data the log function actually made everything worse. I am trying to fit the non-normal data this time. 
@@ -426,6 +426,21 @@ modelsT <- list(
 )
 ```
 
+INDULGENCE + EXPECATION + AVAILABILE + MONITORING + AUTONOMY + MODELING
+```{r}
+modelsT2 <- list(
+  "Difference in parent sex: Indulgence"     = t.test(INDULGENCE ~ Q6_11, data = scaled_data),
+  "Difference in parent sex: Expectation"     = t.test(EXPECATION ~ Q6_11, data = scaled_data),
+  "Difference in parent sex: Availability"     = t.test(AVAILABILE ~ Q6_11, data = scaled_data),
+  "Difference in parent sex: Monitoring"     = t.test(MONITORING ~ Q6_11, data = scaled_data),
+  "Difference in parent sex: Autonomy"     = t.test(AUTONOMY ~ Q6_11, data = scaled_data),
+  "Difference in parent sex: Modeling"     = t.test(MODELING ~ Q6_11, data = scaled_data)
+)
+```
+
+
+
+
 ```{r}
 pFV <- ggplot(scaled_data, aes(factor(Q6_11), Fruits.vegetables)) + 
   geom_violin() + 
@@ -481,58 +496,51 @@ modelsummary(
   statistic = NULL,
   coef_omit = "Intercept",
   coef_rename = c("Q6_11" = "parent sex"))
-grid.arrange(pFV, pSSB,pIND, pMON, nrow = 2)
-```
-## Summary
-Parental sex is weakly related to SSB and FV consumption.
-
-## Basic model
-food security, parent education, child sex, race/ethnicity, independent eating occasions (from covar analysis)
-```{r}
-mFV <-'FV_freq ~ INDULGENCE + EXPECATION + AVAILABILE + MONITORING + AUTONOMY + MODELING + Q6_11  + Race + Sex + Education + Food.security + iEO + Marital.status'
-mSSB <-'SSB_freq ~ INDULGENCE + EXPECATION + AVAILABILE + MONITORING + AUTONOMY + MODELING + Q6_11  + Race + Sex + Education + Food.security + iEO + Marital.status'
-mJUNK <-'JUNK_freq ~ INDULGENCE + EXPECATION + AVAILABILE + MONITORING + AUTONOMY + MODELING + Q6_11  + Race + Sex + Education + Food.security + iEO + Marital.status'
-mSWEET <-'SWEET_freq ~ INDULGENCE + EXPECATION + AVAILABILE + MONITORING + AUTONOMY + MODELING + Q6_11  + Race + Sex + Education + Food.security + iEO + Marital.status'
-```
-
-```{r}
-models <- list(
-  "Fruits and Vegetables"     = lm(mFV, data = scaled_data),
-  "SSB"                       = lm(mSSB, data = scaled_data),
-  "Junk Foods"                = lm(mJUNK, data = scaled_data),
-  "Sugary foods"              = lm(mSWEET, data = scaled_data)
-)
 
 modelsummary(
-  models,
+  modelsT2,
   fmt = 1,
   estimate  = "{estimate} [{conf.low}, {conf.high}] {stars}",
   statistic = NULL,
   coef_omit = "Intercept",
-  coef_rename = c("Q6_11" = "parent sex", "RaceHispanic" = "Hispanic", "RaceNon-Hispanic Black" = "Non-Hispanic Black","RaceNon-Hispanic White" = "Non-Hispanic White", "SexGirl" = "Child girl", "RaceAsian" = "Asian", "RaceOther races" = "Other races", "Food.securityFood secure" = "Food secure", "Marital.status" = "Marital status"))
-```
+  coef_rename = c("Q6_11" = "parent sex"))  
 
-## Monitoring and availability are related to food intake controlling for all other parental variables, sex, child sex,education, food secuirty, education
+grid.arrange(pFV, pSSB,pIND, pMON, nrow = 2)
+```
+## Summary
+Parental sex is weakly related to SSB and FV consumption.
+Parental sex is related to indulgence, monitoring, and autonomy
 
 # Mediation
-Does indulgence or monitoring mediate consumption of SSB or FV?
+Does indulgence, monitoring, autonomy mediate consumption of SSB or FV?
 ```{r}
 parent <- "MONITORING"
 food <- "SSB_freq"
 ```
 
+Race + Sex + Education + Food.security + iEO
+## Make dummy variables
+```{r}
+scaled_data<-dummy_cols(scaled_data, select_columns = c("Race" , "Sex" , "Education" , "Food.security"), remove_first_dummy = TRUE)
+
+names(scaled_data)[names(scaled_data) == 'Race_Non-Hispanic Black'] <- 'RaceBlack'
+names(scaled_data)[names(scaled_data) == 'Race_Asian'] <- 'RaceAsian'
+names(scaled_data)[names(scaled_data) == 'Race_Hispanic'] <- 'RaceHispanic'
+names(scaled_data)[names(scaled_data) == 'Food.security_Food secure'] <- 'FoodSecure'
+names(scaled_data)[names(scaled_data) == 'Race_Other races'] <- 'RaceOther'
+```
 
 ```{r}
 modelr <- function(parent,food){
   sprintf("
          # mediator, a path the effect of sex on food parenting
-         %s ~ a*Q6_11
+         %s ~ a*Q6_11 + RaceBlack + RaceAsian + RaceHispanic + RaceOther + Sex_Girl + Education_2 + Education_3 + Education_4 + FoodSecure
 
          # b path, the effect of parenting on food intake
-         %s ~ b*%s+iEO
+         %s ~ b*%s + iEO + RaceBlack + RaceAsian + RaceHispanic + RaceOther + Sex_Girl + Education_2 + Education_3 + Education_4 + FoodSecure
 
          # direct effect, the effect of sex on food intake
-         Q6_11 ~ cp * %s+iEO
+         Q6_11 ~ cp * %s + iEO + RaceBlack + RaceAsian + RaceHispanic + RaceOther + Sex_Girl + Education_2 + Education_3 + Education_4 + FoodSecure
 
          # indirect 
          ab := a*b
@@ -546,9 +554,11 @@ modelr <- function(parent,food){
 ```{r}
 checkMonSSB <-sem(modelr("MONITORING","SSB_freq"), data = scaled_data, estimator = "MLM")
 checkIndSSB <-sem(modelr("INDULGENCE","SSB_freq"), data = scaled_data, estimator = "MLM")
+checkAutSSB <-sem(modelr("AUTONOMY","SSB_freq"), data = scaled_data, estimator = "MLM")
 
 checkMonFV <-sem(modelr("MONITORING","FV_freq"), data = scaled_data, estimator = "MLM")
 checkIndFV <-sem(modelr("INDULGENCE","FV_freq"), data = scaled_data, estimator = "MLM")
+checkAutFV <-sem(modelr("AUTONOMY","FV_freq"), data = scaled_data, estimator = "MLM")
 ```
 
 
@@ -559,10 +569,13 @@ checkIndFV <-sem(modelr("INDULGENCE","FV_freq"), data = scaled_data, estimator =
 ```
 ## Bootstrap to get p values and confInt
 ```{r}
-checkMonSSB_boot <- bootstrapLavaan(checkMonSSB, R = 4999, FUN = fct, iseed = 8970)
+checkMonSSB_boot <- bootstrapLavaan(checkMonSSB, R = 5000, FUN = fct, iseed = 8970)
 checkIndSSB_boot <- bootstrapLavaan(checkIndSSB, R = 5000, FUN = fct, iseed = 8970)
+checkAutSSB_boot <- bootstrapLavaan(checkAutSSB, R = 5000, FUN = fct, iseed = 8970)
+
 checkMonFV_boot <- bootstrapLavaan(checkMonFV, R = 5000, FUN = fct, iseed = 8970)
 checkIndFV_boot <- bootstrapLavaan(checkIndFV, R = 5000, FUN = fct, iseed = 8970)
+checkAutFV_boot <- bootstrapLavaan(checkAutFV, R = 5000, FUN = fct, iseed = 8970)
 ```
 
 ## The p values of the important parts
@@ -861,5 +874,5 @@ load(file = "/Users/gracer/Library/CloudStorage/OneDrive-UniversityofWyoming/0. 
 #save.image(file = "/Users/gracer/Library/CloudStorage/OneDrive-UniversityofWyoming/0. Lab/M2AENAD Lab - Documents/RESEARCH/multi-state/gender_paper/gender_analysis.RData")
 ```
 
-# this is a change
+
 
