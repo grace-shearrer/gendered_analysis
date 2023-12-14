@@ -766,7 +766,132 @@ Indulgent parenting mediates the relationship between parental sex and FV intake
 Monitoring parenting mediates the relationship between parental sex and SSB intake
 Monitoring parenting mediates the relationship between parental sex and FV intake
 
+# Potential moderation by marital status 
 
+
+```{r}
+modelrm2 <- function(parent,food){
+  sprintf("
+         # mediator, a path the effect of sex on food parenting, ag1 means group 1 of path a
+         %s ~ c(ag1,ag2)*Q6_11  + RaceBlack + RaceAsian + RaceHispanic + RaceOther + Sex_Girl + Education_2 + Education_3 + Education_4 + FoodSecure
+
+         # b path, the effect of parenting on food intake
+         %s ~ c(bg1,bg2)*%s + iEO + RaceBlack + RaceAsian + RaceHispanic + RaceOther + Sex_Girl + Education_2 + Education_3 + Education_4 + FoodSecure
+
+         # direct effect, the effect of sex on food intake
+         Q6_11 ~ c(cg1,cg2)*%s + iEO + RaceBlack + RaceAsian + RaceHispanic + RaceOther + Sex_Girl + Education_2 + Education_3 + Education_4 + FoodSecure
+         
+         
+         
+         # indirect 
+         abg1 := ag1*bg1 #group 1
+         abg2 := ag2*bg2 #group 2
+         
+         # Total effects
+         totalg1 := cg1 + (ag1*bg1)
+         totalg2 := cg2 + (ag2*bg2)
+        ",parent, food, parent, food)
+}
+```
+
+```{r}
+checkMonSSBmod <-sem(modelrm2("MONITORING","SSB_freq"), data = scaled_data, group="Marital.status", estimator = "MLM")
+checkMonFVmod <-sem(modelrm2("MONITORING","FV_freq"), data = scaled_data, group="Marital.status", estimator = "MLM")
+
+summary(checkMonFVmod, fit.measures=T, standardized=T, ci=TRUE)
+```
+
+
+
+
+```{r}
+#Define object similarly to a normal lavaan model, but just telling Lavaan these are the constraints we are interested in testing simultaneously. 
+all.constraints<- 'ag1 == ag2
+                  bg1 == bg2
+                  cg1 == cg2'
+```
+
+```{r}
+lavTestWald(checkMonFVmod, #the name of the Lavaan 'fitted' object
+            constraints = all.constraints) #the name of our previously specified paths that we would like to test
+```
+
+```{r}
+lavTestWald(checkMonSSBmod, constraints = "ag1==ag2")
+lavTestWald(checkMonSSBmod, constraints = "bg1==bg2")
+lavTestWald(checkMonSSBmod, constraints = "cg1==cg2")
+```
+
+```{r}
+modelrm <- function(parent,food){
+  sprintf("
+         # mediator, a path the effect of sex on food parenting, ag1 means group 1 of path a
+         %s ~ a*Q6_11 + w*Marital.status  + RaceBlack + RaceAsian + RaceHispanic + RaceOther + Sex_Girl + Education_2 + Education_3 + Education_4 + FoodSecure
+
+         # b path, the effect of parenting on food intake
+         %s ~ b*%s + iEO + RaceBlack + RaceAsian + RaceHispanic + RaceOther + Sex_Girl + Education_2 + Education_3 + Education_4 + FoodSecure
+
+         # direct effect, the effect of sex on food intake
+         Q6_11 ~ c*%s + iEO + RaceBlack + RaceAsian + RaceHispanic + RaceOther + Sex_Girl + Education_2 + Education_3 + Education_4 + FoodSecure
+         
+         #define moderator (Z - group with a path)
+         Z := w*a
+         
+         # indirect 
+         ab := a*b
+         
+         # Total effects
+         total := c + (a*b)
+         
+        ",parent, food, parent, food)
+}
+```
+
+```{r}
+checkMonFVmod2 <-sem(modelrm("MONITORING","FV_freq"), data = scaled_data, estimator = "MLM")
+```
+
+```{r}
+checkMonSSBmod_boot <- bootstrapLavaan(checkMonSSBmod2, R = 5000, FUN = fct, iseed = 8970)
+checkMonFVmod_boot <- bootstrapLavaan(checkMonFVmod2, R = 5000, FUN = fct, iseed = 8970)
+```
+
+1,2, 12, 23, 103, 104, 105
+
+```{r}
+a<-checkMonSSBmod_boot[,1][!is.na(checkMonSSBmod_boot[,1])] 
+w<-checkMonSSBmod_boot[,2][!is.na(checkMonSSBmod_boot[,2])] 
+b<-checkMonSSBmod_boot[,12][!is.na(checkMonSSBmod_boot[,12])] 
+cp<-checkMonSSBmod_boot[,23][!is.na(checkMonSSBmod_boot[,23])] 
+Z<-checkMonSSBmod_boot[,103][!is.na(checkMonSSBmod_boot[,103])] 
+indirect<-checkMonSSBmod_boot[,104][!is.na(checkMonSSBmod_boot[,104])] 
+Total<-checkMonSSBmod_boot[,105][!is.na(checkMonSSBmod_boot[,105])] 
+
+# Values of the model coefficients
+Betas <- standardizedSolution(checkMonSSBmod2)[,"est.std"]
+
+#Get the p-values for coefficient
+P_vala <-mean( abs(a - mean(a, na.rm = T) )> abs( Betas[1]))
+P_valw <-mean( abs(w - mean(w, na.rm = T) )> abs( Betas[2]))
+P_valb <-mean( abs(b - mean(b, na.rm = T) )> abs( Betas[12]))
+P_valcp <-mean( abs(cp - mean(cp, na.rm = T) )> abs( Betas[23]))
+P_valz <-mean( abs(Z - mean(Z, na.rm = T) )> abs( Betas[103]))
+P_valindirect <-mean( abs(indirect - mean(indirect, na.rm = T) )> abs( Betas[104]))
+P_valtotal <-mean( abs(Total - mean(Total, na.rm = T) )> abs( Betas[105]))
+SSBMonModP<-c(P_vala, P_valw, P_valb, P_valcp, P_valz, P_valindirect, P_valtotal)
+SSBMonModP
+#and some parametric bootstrap confidence intervals (2.5%, 97.5%) 
+ConfIntA <- quantile(a, c(.025, 0.975), na.rm = TRUE)
+ConfIntW <- quantile(w, c(.025, 0.975), na.rm = TRUE)
+ConfIntB <- quantile(b, c(.025, 0.975), na.rm = TRUE)
+ConfIntCP <- quantile(cp, c(.025, 0.975), na.rm = TRUE)
+ConfIntZ <- quantile(Z, c(.025, 0.975), na.rm = TRUE)
+ConfIntIndirect <- quantile(indirect, c(.025, 0.975), na.rm = TRUE)
+ConfIntTotal <- quantile(Total, c(.025, 0.975), na.rm = TRUE)
+SSBMonModCI<-c(ConfIntA, ConfIntW, ConfIntB, ConfIntCP, ConfIntZ, ConfIntIndirect, ConfIntTotal)
+SSBMonModCI
+standardizedSolution(checkMonSSBmod2)
+```
 
 ```{r}
 load(file = "/Users/gracer/Library/CloudStorage/OneDrive-UniversityofWyoming/0. Lab/M2AENAD Lab - Documents/RESEARCH/multi-state/gender_paper/gender_analysis.RData")
@@ -774,8 +899,8 @@ load(file = "/Users/gracer/Library/CloudStorage/OneDrive-UniversityofWyoming/0. 
 
 
 ```{r}
-#save.image(file = "/Users/gracer/Library/CloudStorage/OneDrive-UniversityofWyoming/0. Lab/M2AENAD Lab - Documents/RESEARCH/multi-state/gender_paper/gender_analysis.RData")
+#save.image(file = "/Users/gracer/Library/CloudStorage/OneDrive-UniversityofWyoming/0. Lab/M2AENAD Lab - Documents/RESEARCH/multi-state/gender_paper/gender_analysis121423.RData")
 ```
 
-
+https://rpubs.com/alliechoate/502710
 
