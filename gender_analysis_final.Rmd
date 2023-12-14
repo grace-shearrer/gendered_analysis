@@ -424,6 +424,7 @@ modelsT <- list(
   "Difference in parent sex: Junk Foods"     = t.test(JUNK_freq ~ Q6_11, data = scaled_data),
   "Difference in parent sex: Sugary foods"     = t.test(SWEET_freq ~ Q6_11, data = scaled_data)
 )
+t.test(SSB_freq ~ Q6_11, data = scaled_data)
 ```
 
 INDULGENCE + EXPECATION + AVAILABILE + MONITORING + AUTONOMY + MODELING
@@ -451,7 +452,8 @@ pFV <- ggplot(scaled_data, aes(factor(Q6_11), Fruits.vegetables)) +
   scale_x_discrete(breaks=c("1", "2"),
                       labels=c("Male", "Female")) +
   labs(title="Fruit and vegetable intakeby parent sex",
-        x ="Parent Sex", y = "Frequency of fruit and vegetable intake")
+        x ="Parent Sex", y = "Frequency of fruit and vegetable intake")+ 
+  theme_classic()
 
 pSSB <- ggplot(scaled_data, aes(factor(Q6_11), SSB)) + 
   geom_violin() + 
@@ -462,7 +464,8 @@ pSSB <- ggplot(scaled_data, aes(factor(Q6_11), SSB)) +
   scale_x_discrete(breaks=c("1", "2"),
                       labels=c("Male", "Female")) +
   labs(title="SSB intakeby parent sex",
-        x ="Parent Sex", y = "Frequency of SSB intake")
+        x ="Parent Sex", y = "Frequency of SSB intake")+ 
+  theme_classic()
 
 pIND <- ggplot(scaled_data, aes(factor(Q6_11), Indulgence)) + 
   geom_violin() + 
@@ -473,7 +476,8 @@ pIND <- ggplot(scaled_data, aes(factor(Q6_11), Indulgence)) +
   scale_x_discrete(breaks=c("1", "2"),
                       labels=c("Male", "Female")) +
   labs(title="Indulgent parenting by parent sex",
-        x ="Parent Sex", y = "Indulgent parenting")
+        x ="Parent Sex", y = "Indulgent parenting")+ 
+  theme_classic()
 
 pMON <- ggplot(scaled_data, aes(factor(Q6_11), Monitoring)) + 
   geom_violin() + 
@@ -484,7 +488,20 @@ pMON <- ggplot(scaled_data, aes(factor(Q6_11), Monitoring)) +
   scale_x_discrete(breaks=c("1", "2"),
                       labels=c("Male", "Female")) +
   labs(title="Parental monitoring by parent sex",
-        x ="Parent Sex", y = "Monitoring")
+        x ="Parent Sex", y = "Monitoring")+ 
+  theme_classic()
+
+pAUT <- ggplot(scaled_data, aes(factor(Q6_11), Autonomy.Support)) + 
+  geom_violin() + 
+  stat_summary(fun = "mean",
+               geom = "crossbar", 
+               width = 0.5,
+               colour = "red") + 
+  scale_x_discrete(breaks=c("1", "2"),
+                      labels=c("Male", "Female")) +
+  labs(title="Parental autonomy support by parent sex",
+        x ="Parent Sex", y = "Autonomy support") + 
+  theme_classic()
 
 ```
 # Display
@@ -505,7 +522,8 @@ modelsummary(
   coef_omit = "Intercept",
   coef_rename = c("Q6_11" = "parent sex"))  
 
-grid.arrange(pFV, pSSB,pIND, pMON, nrow = 2)
+grid.arrange(pFV, pSSB, nrow = 1)
+grid.arrange(pIND, pMON, pAUT, nrow = 2)
 ```
 ## Summary
 Parental sex is weakly related to SSB and FV consumption.
@@ -767,8 +785,6 @@ Monitoring parenting mediates the relationship between parental sex and SSB inta
 Monitoring parenting mediates the relationship between parental sex and FV intake
 
 # Potential moderation by marital status 
-
-
 ```{r}
 modelrm2 <- function(parent,food){
   sprintf("
@@ -798,11 +814,9 @@ modelrm2 <- function(parent,food){
 checkMonSSBmod <-sem(modelrm2("MONITORING","SSB_freq"), data = scaled_data, group="Marital.status", estimator = "MLM")
 checkMonFVmod <-sem(modelrm2("MONITORING","FV_freq"), data = scaled_data, group="Marital.status", estimator = "MLM")
 
-summary(checkMonFVmod, fit.measures=T, standardized=T, ci=TRUE)
+checkIndSSBmod <-sem(modelrm2("INDULGENCE","SSB_freq"), data = scaled_data, group="Marital.status", estimator = "MLM")
+checkIndFVmod <-sem(modelrm2("INDULGENCE","FV_freq"), data = scaled_data, group="Marital.status", estimator = "MLM")
 ```
-
-
-
 
 ```{r}
 #Define object similarly to a normal lavaan model, but just telling Lavaan these are the constraints we are interested in testing simultaneously. 
@@ -810,10 +824,19 @@ all.constraints<- 'ag1 == ag2
                   bg1 == bg2
                   cg1 == cg2'
 ```
+Not related to indulgence SSB nor FV
 
 ```{r}
-lavTestWald(checkMonFVmod, #the name of the Lavaan 'fitted' object
+lavTestWald(checkMonSSBmod, #the name of the Lavaan 'fitted' object
             constraints = all.constraints) #the name of our previously specified paths that we would like to test
+lavTestWald(checkMonFVmod, #the name of the Lavaan 'fitted' object
+            constraints = all.constraints) #Not significant
+
+lavTestWald(checkIndSSBmod, #the name of the Lavaan 'fitted' object
+            constraints = all.constraints) #Not significant
+
+lavTestWald(checkIndFVmod, #the name of the Lavaan 'fitted' object
+            constraints = all.constraints) #Not significant
 ```
 
 ```{r}
@@ -848,12 +871,11 @@ modelrm <- function(parent,food){
 ```
 
 ```{r}
-checkMonFVmod2 <-sem(modelrm("MONITORING","FV_freq"), data = scaled_data, estimator = "MLM")
+checkMonSSBmod2 <-sem(modelrm("MONITORING","SSB_freq"), data = scaled_data, estimator = "MLM")
 ```
 
 ```{r}
 checkMonSSBmod_boot <- bootstrapLavaan(checkMonSSBmod2, R = 5000, FUN = fct, iseed = 8970)
-checkMonFVmod_boot <- bootstrapLavaan(checkMonFVmod2, R = 5000, FUN = fct, iseed = 8970)
 ```
 
 1,2, 12, 23, 103, 104, 105
@@ -880,6 +902,7 @@ P_valindirect <-mean( abs(indirect - mean(indirect, na.rm = T) )> abs( Betas[104
 P_valtotal <-mean( abs(Total - mean(Total, na.rm = T) )> abs( Betas[105]))
 SSBMonModP<-c(P_vala, P_valw, P_valb, P_valcp, P_valz, P_valindirect, P_valtotal)
 SSBMonModP
+
 #and some parametric bootstrap confidence intervals (2.5%, 97.5%) 
 ConfIntA <- quantile(a, c(.025, 0.975), na.rm = TRUE)
 ConfIntW <- quantile(w, c(.025, 0.975), na.rm = TRUE)
@@ -892,6 +915,7 @@ SSBMonModCI<-c(ConfIntA, ConfIntW, ConfIntB, ConfIntCP, ConfIntZ, ConfIntIndirec
 SSBMonModCI
 standardizedSolution(checkMonSSBmod2)
 ```
+
 
 ```{r}
 load(file = "/Users/gracer/Library/CloudStorage/OneDrive-UniversityofWyoming/0. Lab/M2AENAD Lab - Documents/RESEARCH/multi-state/gender_paper/gender_analysis.RData")
