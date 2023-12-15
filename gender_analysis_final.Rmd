@@ -437,6 +437,7 @@ modelsT2 <- list(
   "Difference in parent sex: Autonomy"     = t.test(AUTONOMY ~ Q6_11, data = scaled_data),
   "Difference in parent sex: Modeling"     = t.test(MODELING ~ Q6_11, data = scaled_data)
 )
+t.test(AUTONOMY  ~ Q6_11, data = scaled_data)
 ```
 
 
@@ -558,7 +559,7 @@ modelr <- function(parent,food){
          %s ~ b*%s + iEO + RaceBlack + RaceAsian + RaceHispanic + RaceOther + Sex_Girl + Education_2 + Education_3 + Education_4 + FoodSecure
 
          # direct effect, the effect of sex on food intake
-         Q6_11 ~ cp * %s + iEO + RaceBlack + RaceAsian + RaceHispanic + RaceOther + Sex_Girl + Education_2 + Education_3 + Education_4 + FoodSecure
+          %s ~ cp*Q6_11 
 
          # indirect 
          ab := a*b
@@ -569,6 +570,10 @@ modelr <- function(parent,food){
 }
 ```
 
+
+
+
+
 ```{r}
 checkMonSSB <-sem(modelr("MONITORING","SSB_freq"), data = scaled_data, estimator = "MLM")
 checkIndSSB <-sem(modelr("INDULGENCE","SSB_freq"), data = scaled_data, estimator = "MLM")
@@ -578,6 +583,8 @@ checkMonFV <-sem(modelr("MONITORING","FV_freq"), data = scaled_data, estimator =
 checkIndFV <-sem(modelr("INDULGENCE","FV_freq"), data = scaled_data, estimator = "MLM")
 checkAutFV <-sem(modelr("AUTONOMY","FV_freq"), data = scaled_data, estimator = "MLM")
 ```
+
+
 
 
 ```{r}
@@ -855,7 +862,7 @@ modelrm <- function(parent,food){
          %s ~ b*%s + iEO + RaceBlack + RaceAsian + RaceHispanic + RaceOther + Sex_Girl + Education_2 + Education_3 + Education_4 + FoodSecure
 
          # direct effect, the effect of sex on food intake
-         Q6_11 ~ c*%s + iEO + RaceBlack + RaceAsian + RaceHispanic + RaceOther + Sex_Girl + Education_2 + Education_3 + Education_4 + FoodSecure
+         %s ~ c*Q6_11 + iEO + RaceBlack + RaceAsian + RaceHispanic + RaceOther + Sex_Girl + Education_2 + Education_3 + Education_4 + FoodSecure
          
          #define moderator (Z - group with a path)
          Z := w*a
@@ -917,8 +924,111 @@ standardizedSolution(checkMonSSBmod2)
 ```
 
 
+# Figures
 ```{r}
-load(file = "/Users/gracer/Library/CloudStorage/OneDrive-UniversityofWyoming/0. Lab/M2AENAD Lab - Documents/RESEARCH/multi-state/gender_paper/gender_analysis.RData")
+cbPalette <- c( "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#999999")
+
+```
+
+```{r}
+pFV <- ggplot(scaled_data, aes(factor(Q6_11), Fruits.vegetables, fill = factor(Q6_11))) + 
+  geom_violin() + 
+  stat_summary(fun = "mean",
+               geom = "crossbar", 
+               width = 0.5,
+               colour ="black") + 
+  scale_x_discrete(breaks=c("1", "2"),
+                      labels=c("Male", "Female")) +
+  labs(title="Adolescent independent fruit and vegetable\n intake by parent sex",
+        x ="Parent Sex", y = "Frequency of Adolescent independent\n fruit and vegetable intake")+ 
+  scale_fill_manual(values=cbPalette) +
+  theme_classic() + 
+  theme(legend.position="none") + 
+  theme(text = element_text(size=12),
+        plot.title = element_text(face="bold", hjust = 0.5))
+
+pSSB <- ggplot(scaled_data, aes(factor(Q6_11), SSB, fill =factor(Q6_11) )) + 
+  geom_violin() + 
+  stat_summary(fun = "mean",
+               geom = "crossbar", 
+               width = 0.5,
+               colour = "black") + 
+  scale_x_discrete(breaks=c("1", "2"),
+                      labels=c("Male", "Female")) +
+  labs(title="Adolescent independent sugar sweetened beverage\n intake by parent sex",
+        x ="Parent Sex", y = "Frequency of adolescent independent\n sugar sweetened beverage intake")+ 
+  scale_fill_manual(values=cbPalette) +
+  theme_classic() +
+  theme(legend.position="none") + 
+  theme(text = element_text(size=12),
+        plot.title = element_text(face="bold", hjust = 0.5))
+
+pIND <- ggplot(scaled_data, aes(factor(Q6_11), Indulgence, fill =factor(Q6_11) )) + 
+  geom_violin() + 
+  stat_summary(fun = "mean",
+               geom = "crossbar", 
+               width = 0.5,
+               colour = "black") + 
+  scale_x_discrete(breaks=c("1", "2"),
+                      labels=c("Male", "Female")) +
+  labs(title="Parent reported indulgent parenting practices\n by parent sex",
+        x ="Parent Sex", y = "Indulgent parenting practices")+ 
+  scale_fill_manual(values=cbPalette) +
+  theme_classic() +
+  theme(legend.position="none") + 
+  theme(text = element_text(size=12),
+        plot.title = element_text(face="bold", hjust = 0.5))
+
+pMON <- ggplot(scaled_data, aes(factor(Q6_11), Monitoring, fill =factor(Q6_11) )) + 
+  geom_violin() + 
+  stat_summary(fun = "mean",
+               geom = "crossbar", 
+               width = 0.5,
+               colour = "black") + 
+  scale_x_discrete(breaks=c("1", "2"),
+                      labels=c("Male", "Female")) +
+  labs(title="Parent reported monitoring parenting practices\n by parent sex",
+        x ="Parent Sex", y = "Monitoring parenting practices")+ 
+  scale_fill_manual(values=cbPalette) +
+  theme_classic() +
+  theme(legend.position="none") + 
+  theme(text = element_text(size=12),
+        plot.title = element_text(face="bold", hjust = 0.5))
+
+pAUT <- ggplot(scaled_data, aes(factor(Q6_11), Autonomy.Support, fill =factor(Q6_11) )) + 
+  geom_violin() + 
+  stat_summary(fun = "mean",
+               geom = "crossbar", 
+               width = 0.5,
+               colour = "black") + 
+  scale_x_discrete(breaks=c("1", "2"),
+                      labels=c("Male", "Female")) +
+  labs(title="Parent reported autonomy supportive parenting practices\n by parent sex",
+        x ="Parent Sex", y = "Autonomy supportive parenting practices")+ 
+  scale_fill_manual(values=cbPalette) +
+  theme_classic() +
+  theme(legend.position="none") + 
+  theme(text = element_text(size=12),
+        plot.title = element_text(face="bold", hjust = 0.5))
+```
+
+```{r}
+pAUT
+```
+
+
+```{r}
+med_plots(cont = 0,int = 0, scaled_data$Q6_11, scaled_data$INDULGENCE, scaled_data$SSB_freq)
+```
+
+
+```{r}
+ggsave("/Users/gracer/Library/CloudStorage/OneDrive-UniversityofWyoming/0. Lab/M2AENAD Lab - Documents/RESEARCH/multi-state/gender_paper/AUTplot.png", pAUT, scale = 2, width = 3, height = 3, units = "in")
+```
+
+
+```{r}
+load(file = "/Users/gracer/Library/CloudStorage/OneDrive-UniversityofWyoming/0. Lab/M2AENAD Lab - Documents/RESEARCH/multi-state/gender_paper/gender_analysis121423.RData")
 ```
 
 
