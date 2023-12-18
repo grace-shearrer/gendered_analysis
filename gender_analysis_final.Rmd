@@ -605,6 +605,9 @@ checkAutFV_boot <- bootstrapLavaan(checkAutFV, R = 5000, FUN = fct, iseed = 8970
 
 ## The p values of the important parts
 1, 11, 22, 91, 92
+```{r}
+standardizedSolution(checkMonSSB)
+```
 
 
 ### Monitoring SSB
@@ -626,6 +629,7 @@ P_valindirect <-mean( abs(indirect - mean(indirect, na.rm = T) )> abs( Betas[91]
 P_valtotal <-mean( abs(Total - mean(Total, na.rm = T) )> abs( Betas[92]))
 SSBmonP<-c(P_vala, P_valb, P_valcp, P_valindirect, P_valtotal)
 SSBmonP
+P_valtotal
 #and some parametric bootstrap confidence intervals (2.5%, 97.5%) 
 ConfIntA <- quantile(a, c(.025, 0.975), na.rm = TRUE)
 ConfIntB <- quantile(b, c(.025, 0.975), na.rm = TRUE)
@@ -633,7 +637,7 @@ ConfIntCP <- quantile(cp, c(.025, 0.975), na.rm = TRUE)
 ConfIntIndirect <- quantile(indirect, c(.025, 0.975), na.rm = TRUE)
 ConfIntTotal <- quantile(Total, c(.025, 0.975), na.rm = TRUE)
 SSBmonCI<-c(ConfIntA, ConfIntB, ConfIntCP, ConfIntIndirect, ConfIntTotal)
-SSBmonCI
+ConfIntTotal
 standardizedSolution(checkMonSSB)
 ```
 
@@ -802,7 +806,7 @@ modelrm2 <- function(parent,food){
          %s ~ c(bg1,bg2)*%s + iEO + RaceBlack + RaceAsian + RaceHispanic + RaceOther + Sex_Girl + Education_2 + Education_3 + Education_4 + FoodSecure
 
          # direct effect, the effect of sex on food intake
-         Q6_11 ~ c(cg1,cg2)*%s + iEO + RaceBlack + RaceAsian + RaceHispanic + RaceOther + Sex_Girl + Education_2 + Education_3 + Education_4 + FoodSecure
+         %s ~ c(cg1,cg2)*Q6_11 
          
          
          
@@ -862,7 +866,7 @@ modelrm <- function(parent,food){
          %s ~ b*%s + iEO + RaceBlack + RaceAsian + RaceHispanic + RaceOther + Sex_Girl + Education_2 + Education_3 + Education_4 + FoodSecure
 
          # direct effect, the effect of sex on food intake
-         %s ~ c*Q6_11 + iEO + RaceBlack + RaceAsian + RaceHispanic + RaceOther + Sex_Girl + Education_2 + Education_3 + Education_4 + FoodSecure
+         %s ~ c*Q6_11 
          
          #define moderator (Z - group with a path)
          Z := w*a
@@ -1033,7 +1037,7 @@ load(file = "/Users/gracer/Library/CloudStorage/OneDrive-UniversityofWyoming/0. 
 
 
 ```{r}
-#save.image(file = "/Users/gracer/Library/CloudStorage/OneDrive-UniversityofWyoming/0. Lab/M2AENAD Lab - Documents/RESEARCH/multi-state/gender_paper/gender_analysis121423.RData")
+save.image(file = "/Users/gracer/Library/CloudStorage/OneDrive-UniversityofWyoming/0. Lab/M2AENAD Lab - Documents/RESEARCH/multi-state/gender_paper/gender_analysis121523.RData")
 ```
 
 https://rpubs.com/alliechoate/502710
